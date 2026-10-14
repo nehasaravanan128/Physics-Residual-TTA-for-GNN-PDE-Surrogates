@@ -250,6 +250,54 @@ app.get("/api/dataset/info", async (req, res) => {
   }
 });
 
+// ─── POST /api/evaluate-geometric (Geometric Distribution Shift Benchmark) ──
+app.post("/api/evaluate-geometric", async (req, res) => {
+  const {
+    dataPath = "files (5)/1D_Burgers_Sols_Nu0.001.hdf5",
+    checkpointPath = "real_burgers_model.pt",
+    numSamples = 5,
+    ttaSteps = 10,
+    ttaLr = 0.0001,
+    shiftType = "all",
+  } = req.body;
+
+  try {
+    const jsonPath = path.join(SCRIPTS_DIR, "geometric_benchmark_results.json");
+    const args = [
+      "--data_path", dataPath,
+      "--checkpoint_path", checkpointPath,
+      "--num_samples", String(numSamples),
+      "--tta_steps", String(ttaSteps),
+      "--tta_lr", String(ttaLr),
+      "--shift_type", shiftType,
+      "--output_json", jsonPath,
+    ];
+
+    await runPython("evaluate_geometric_shift.py", args);
+    if (fs.existsSync(jsonPath)) {
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+      return res.json({ success: true, results: data });
+    }
+    res.json({ success: false, error: "Failed to generate benchmark output." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/evaluate-geometric/cached ──────────────────────────────────────
+app.get("/api/evaluate-geometric/cached", (req, res) => {
+  const jsonPath = path.join(SCRIPTS_DIR, "geometric_benchmark_results.json");
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+      return res.json({ success: true, results: data });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+  return res.json({ success: false, message: "No cached geometric benchmark results yet." });
+});
+
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 

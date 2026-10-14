@@ -101,12 +101,21 @@ Evaluated across held-out PDEBench trajectories using `scripts/evaluate_tta.py`:
 | Trajectory 6666 | $t=20$ | $4.587 \times 10^{-5}$ | $2.873 \times 10^{-5}$ | **+37.35%** |
 | **Mean Aggregate** | — | **$7.491 \times 10^{-4}$** | **$1.955 \times 10^{-4}$** | **+73.89% error reduction** |
 
-### Experiment 2: Parameter Distribution Shift ($\nu = 0.002$)
+### Experiment 2: Parameter Distribution Shift (ν = 0.002)
 | Metric | Baseline Surrogate | Physics-Residual TTA | Change |
 |---|:---:|:---:|:---:|
 | **Mean MSE** | $7.491 \times 10^{-4}$ | $1.939 \times 10^{-4}$ | **+74.11% reduction** |
 | **Mean Relative MSE** | $2.255 \times 10^{-3}$ | $1.070 \times 10^{-3}$ | **+52.52% reduction** |
 | **Mean Physics Residual** | $47.41$ | $27.36$ | **-42.29% drop** |
+
+### Experiment 3: Geometric Distribution Shift Benchmark (Unseen Mesh Discretizations)
+Evaluates when spatial mesh coordinates are non-uniform, distorted, or scale-shifted:
+
+| Geometric Shift Regime | Mesh Characteristics | Baseline GNN MSE | Physics-Residual TTA MSE | Error Reduction (%) | Residual Drop (%) |
+|---|---|:---:|:---:|:---:|:---:|
+| **Stochastic Irregular Mesh** | Random node jitter $\Delta x \pm 35\%$ | $5.017 \times 10^{-2}$ | $4.203 \times 10^{-2}$ | **+16.22%** | **-23.54%** |
+| **Boundary-Layer Warping** | Non-uniform refinement ($x \mapsto x + \alpha \sin(2\pi x)$) | $4.212 \times 10^{-2}$ | $3.443 \times 10^{-2}$ | **+18.26%** | **-12.55%** |
+| **Resolution Scale Shift** | Subsampled mesh ($N=512$, $2\times$ edge distances) | $5.004 \times 10^{-2}$ | $3.815 \times 10^{-2}$ | **+23.77%** | **-17.65%** |
 
 ---
 
@@ -123,7 +132,7 @@ python scripts/tta.py \
   --tta_lr 0.00008
 ```
 
-### 2. Run Batch TTA Benchmark (Comparative Evaluation)
+### 2. Run Batch TTA Benchmark (Parameter Shift)
 ```bash
 # In-distribution benchmark across 10 test trajectories
 python scripts/evaluate_tta.py \
@@ -138,6 +147,15 @@ python scripts/evaluate_tta.py \
   --checkpoint_path real_burgers_model.pt \
   --num_samples 10 \
   --nu_shift 0.002
+```
+
+### 3. Run Geometric Distribution Shift Benchmark (Irregular & Warped Meshes)
+```bash
+python scripts/evaluate_geometric_shift.py \
+  --data_path "files (5)/1D_Burgers_Sols_Nu0.001.hdf5" \
+  --checkpoint_path real_burgers_model.pt \
+  --num_samples 10 \
+  --shift_type all
 ```
 
 ### 3. Start Interactive Web Application
