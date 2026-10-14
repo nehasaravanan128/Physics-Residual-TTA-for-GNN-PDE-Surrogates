@@ -1,0 +1,158 @@
+{
+  "jitter": {
+    "name": "Stochastic Irregular Mesh (Jitter \u00b135%)",
+    "num_nodes": 1024,
+    "mean_baseline_mse": 0.05017398651689291,
+    "mean_adapted_mse": 0.042034346878062935,
+    "mean_baseline_rel_mse": 0.031484182073756875,
+    "mean_adapted_rel_mse": 0.02820743857913694,
+    "error_reduction_pct": 16.22282821017115,
+    "mean_residual_drop_pct": 23.537413544949075,
+    "samples": [
+      {
+        "trajectory": 0,
+        "timestep": 10,
+        "baseline_mse": 0.0017602085135877132,
+        "adapted_mse": 0.0003764479770325124,
+        "improvement_pct": 78.61344413877285,
+        "residual_drop_pct": 53.60498377153341
+      },
+      {
+        "trajectory": 2000,
+        "timestep": 14,
+        "baseline_mse": 0.010443239472806454,
+        "adapted_mse": 0.01012320164591074,
+        "improvement_pct": 3.0645455151064227,
+        "residual_drop_pct": 11.951248346048663
+      },
+      {
+        "trajectory": 4000,
+        "timestep": 18,
+        "baseline_mse": 0.21387554705142975,
+        "adapted_mse": 0.1754218339920044,
+        "improvement_pct": 17.9794808661219,
+        "residual_drop_pct": 17.85148462745195
+      },
+      {
+        "trajectory": 6000,
+        "timestep": 22,
+        "baseline_mse": 0.02031467854976654,
+        "adapted_mse": 0.01944591850042343,
+        "improvement_pct": 4.27651388730979,
+        "residual_drop_pct": 23.13681636381867
+      },
+      {
+        "trajectory": 8000,
+        "timestep": 26,
+        "baseline_mse": 0.004476258996874094,
+        "adapted_mse": 0.00480433227494359,
+        "improvement_pct": -7.329184443943023,
+        "residual_drop_pct": 11.142534615892687
+      }
+    ]
+  },
+  "warped": {
+    "name": "Non-Uniform Warped Refinement (Boundary Layer)",
+    "num_nodes": 1024,
+    "mean_baseline_mse": 0.04212361339014024,
+    "mean_adapted_mse": 0.034433767665177584,
+    "mean_baseline_rel_mse": 0.0277672650330767,
+    "mean_adapted_rel_mse": 0.024596834671911576,
+    "error_reduction_pct": 18.255427552572197,
+    "mean_residual_drop_pct": 12.553831275268914,
+    "samples": [
+      {
+        "trajectory": 0,
+        "timestep": 10,
+        "baseline_mse": 0.0017158776754513383,
+        "adapted_mse": 0.0013868778478354216,
+        "improvement_pct": 19.173850929051675,
+        "residual_drop_pct": 16.008100887843487
+      },
+      {
+        "trajectory": 2000,
+        "timestep": 14,
+        "baseline_mse": 0.009757250547409058,
+        "adapted_mse": 0.009439988061785698,
+        "improvement_pct": 3.251556205119747,
+        "residual_drop_pct": 10.101384506212915
+      },
+      {
+        "trajectory": 4000,
+        "timestep": 18,
+        "baseline_mse": 0.17757484316825867,
+        "adapted_mse": 0.14035183191299438,
+        "improvement_pct": 20.961871958402416,
+        "residual_drop_pct": 16.157663988196678
+      },
+      {
+        "trajectory": 6000,
+        "timestep": 22,
+        "baseline_mse": 0.018558556213974953,
+        "adapted_mse": 0.017978601157665253,
+        "improvement_pct": 3.1250009409297834,
+        "residual_drop_pct": 20.502006994091488
+      },
+      {
+        "trajectory": 8000,
+        "timestep": 26,
+        "baseline_mse": 0.0030115393456071615,
+        "adapted_mse": 0.0030115393456071615,
+        "improvement_pct": 0.0,
+        "residual_drop_pct": 0.0
+      }
+    ]
+  },
+  "coarse": {
+    "name": "Resolution Scale Shift (N=512, 2x Edge Lengths)",
+    "num_nodes": 512,
+    "mean_baseline_mse": 0.050043124496005474,
+    "mean_adapted_mse": 0.038147307257167994,
+    "mean_baseline_rel_mse": 0.03137839465791713,
+    "mean_adapted_rel_mse": 0.02669351289730782,
+    "error_reduction_pct": 23.77113211583546,
+    "mean_residual_drop_pct": 6.483182841567765,
+    "samples": [
+      {
+        "trajectory": 0,
+        "timestep": 10,
+        "baseline_mse": 0.0017627639463171363,
+        "adapted_mse": 0.0014738262398168445,
+        "improvement_pct": 16.391174048230134,
+        "residual_drop_pct": 13.379002442578436
+      },
+      {
+        "trajectory": 2000,
+        "timestep": 14,
+        "baseline_mse": 0.0103451581671834,
+        "adapted_mse": 0.009975019842386246,
+        "improvement_pct": 3.577889470760294,
+        "residual_drop_pct": 6.771513772216747
+      },
+      {
+        "trajectory": 4000,
+        "timestep": 18,
+        "baseline_mse": 0.21366360783576965,
+        "adapted_mse": 0.15680813789367676,
+        "improvement_pct": 26.609805253215736,
+        "residual_drop_pct": 18.034328625910963
+      },
+      {
+        "trajectory": 6000,
+        "timestep": 22,
+        "baseline_mse": 0.019832512363791466,
+        "adapted_mse": 0.017501384019851685,
+        "improvement_pct": 11.75407483015495,
+        "residual_drop_pct": 11.043959494266115
+      },
+      {
+        "trajectory": 8000,
+        "timestep": 26,
+        "baseline_mse": 0.004611580166965723,
+        "adapted_mse": 0.004978168290108442,
+        "improvement_pct": -7.949295249570016,
+        "residual_drop_pct": -16.812890127133446
+      }
+    ]
+  }
+}
