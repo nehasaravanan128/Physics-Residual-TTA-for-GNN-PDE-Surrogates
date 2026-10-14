@@ -31,6 +31,10 @@ aiml project/
 │   ├── physics_loss.py     # Differentiable PINN-style Burgers PDE residual module
 │   ├── tta.py              # Test-Time Adaptation engine (freezing + anchor optimization)
 │   ├── evaluate_tta.py     # Batch comparative benchmarking suite (Shift vs In-Dist)
+│   ├── evaluate_geometric_shift.py  # Geometric mesh distortion benchmark
+│   ├── evaluate_ablations.py       # Systematic ablation suite (K, λ, η, scope)
+│   ├── run_all_benchmarks.py       # 1-click master reproduction runner
+│   ├── generate_synthetic_pde.py   # Pseudo-spectral Burgers dataset generator
 │   ├── infer.py            # Multi-step inference bridge for API
 │   ├── evaluate_api.py     # Evaluation bridge for API
 │   └── dataset_info.py     # Dataset metadata extractor
@@ -43,12 +47,17 @@ aiml project/
 │   │   ├── inference/      # TTA execution & multi-step rollout viewer
 │   │   ├── explore/        # Space-time waterfall & dataset explorer
 │   │   ├── train/          # Training telemetry & live loss streaming
-│   │   ├── evaluate/       # Benchmark metric reporting
+│   │   ├── evaluate/       # Benchmark metric reporting (Geometric + Ablations + Standard)
 │   │   └── components/
 │   │       ├── FlowVisualizer.tsx  # Canvas fluid wave & particle simulator
 │   │       └── Sidebar.tsx
 │   └── src/app/globals.css # Warm brown/beige editorial design system
 ├── real_burgers_model.pt   # Pretrained MeshGraphNet checkpoint
+├── PROJECT_REPORT.md       # Full academic project report
+├── PRESENTATION_SLIDES.md  # 12-slide conference/defense deck
+├── BENCHMARK_RESULTS_SUMMARY.md  # Auto-generated consolidated results
+├── benchmark_summary.csv   # Machine-readable benchmark matrix
+├── run_experiments.bat     # Windows 1-click reproduction script
 └── README.md
 ```
 
