@@ -2,64 +2,56 @@
   "jitter": {
     "name": "Stochastic Irregular Mesh (Jitter \u00b135%)",
     "num_nodes": 1024,
-    "mean_baseline_mse": 0.05017398651689291,
-    "mean_adapted_mse": 0.042034346878062935,
-    "mean_baseline_rel_mse": 0.031484182073756875,
-    "mean_adapted_rel_mse": 0.02820743857913694,
-    "error_reduction_pct": 16.22282821017115,
-    "mean_residual_drop_pct": 23.537413544949075,
+    "mean_baseline_mse": 0.0035476308676152257,
+    "mean_adapted_mse": 0.003557666717824759,
+    "mean_baseline_rel_mse": 0.011661234283740052,
+    "mean_adapted_rel_mse": 0.014344058452794718,
+    "error_reduction_pct": -0.28288879491793056,
+    "mean_residual_drop_pct": 14.595882612437759,
     "samples": [
       {
         "trajectory": 0,
         "timestep": 10,
         "baseline_mse": 0.0017602085135877132,
-        "adapted_mse": 0.0003764479770325124,
-        "improvement_pct": 78.61344413877285,
-        "residual_drop_pct": 53.60498377153341
+        "adapted_mse": 0.0002927569148596376,
+        "improvement_pct": 83.36805482988314,
+        "residual_drop_pct": 59.15525503529449
       },
       {
-        "trajectory": 2000,
+        "trajectory": 2500,
         "timestep": 14,
-        "baseline_mse": 0.010443239472806454,
-        "adapted_mse": 0.01012320164591074,
-        "improvement_pct": 3.0645455151064227,
-        "residual_drop_pct": 11.951248346048663
+        "baseline_mse": 3.1152092560660094e-05,
+        "adapted_mse": 0.00013874935393687338,
+        "improvement_pct": -345.39336696787655,
+        "residual_drop_pct": -24.992884172060318
       },
       {
-        "trajectory": 4000,
+        "trajectory": 5000,
         "timestep": 18,
-        "baseline_mse": 0.21387554705142975,
-        "adapted_mse": 0.1754218339920044,
-        "improvement_pct": 17.9794808661219,
-        "residual_drop_pct": 17.85148462745195
+        "baseline_mse": 0.011830485425889492,
+        "adapted_mse": 0.012887803837656975,
+        "improvement_pct": -8.937236078696126,
+        "residual_drop_pct": 9.966170369630657
       },
       {
-        "trajectory": 6000,
+        "trajectory": 7500,
         "timestep": 22,
-        "baseline_mse": 0.02031467854976654,
-        "adapted_mse": 0.01944591850042343,
-        "improvement_pct": 4.27651388730979,
-        "residual_drop_pct": 23.13681636381867
-      },
-      {
-        "trajectory": 8000,
-        "timestep": 26,
-        "baseline_mse": 0.004476258996874094,
-        "adapted_mse": 0.00480433227494359,
-        "improvement_pct": -7.329184443943023,
-        "residual_drop_pct": 11.142534615892687
+        "baseline_mse": 0.0005686774384230375,
+        "adapted_mse": 0.0009113567648455501,
+        "improvement_pct": -60.25899803107616,
+        "residual_drop_pct": 14.254989216886205
       }
     ]
   },
   "warped": {
     "name": "Non-Uniform Warped Refinement (Boundary Layer)",
     "num_nodes": 1024,
-    "mean_baseline_mse": 0.04212361339014024,
-    "mean_adapted_mse": 0.034433767665177584,
-    "mean_baseline_rel_mse": 0.0277672650330767,
-    "mean_adapted_rel_mse": 0.024596834671911576,
-    "error_reduction_pct": 18.255427552572197,
-    "mean_residual_drop_pct": 12.553831275268914,
+    "mean_baseline_mse": 0.006033226356521482,
+    "mean_adapted_mse": 0.006867304633487947,
+    "mean_baseline_rel_mse": 0.014026218663510094,
+    "mean_adapted_rel_mse": 0.018164866887097182,
+    "error_reduction_pct": -13.824746954254207,
+    "mean_residual_drop_pct": -3.9248977597505235,
     "samples": [
       {
         "trajectory": 0,
@@ -70,48 +62,40 @@
         "residual_drop_pct": 16.008100887843487
       },
       {
-        "trajectory": 2000,
+        "trajectory": 2500,
         "timestep": 14,
-        "baseline_mse": 0.009757250547409058,
-        "adapted_mse": 0.009439988061785698,
-        "improvement_pct": 3.251556205119747,
-        "residual_drop_pct": 10.101384506212915
+        "baseline_mse": 3.0146926292218268e-05,
+        "adapted_mse": 0.00012601976050063968,
+        "improvement_pct": -318.0186042156104,
+        "residual_drop_pct": -56.699484335066664
       },
       {
-        "trajectory": 4000,
+        "trajectory": 5000,
         "timestep": 18,
-        "baseline_mse": 0.17757484316825867,
-        "adapted_mse": 0.14035183191299438,
-        "improvement_pct": 20.961871958402416,
-        "residual_drop_pct": 16.157663988196678
+        "baseline_mse": 0.021812429651618004,
+        "adapted_mse": 0.024992721155285835,
+        "improvement_pct": -14.580179991236895,
+        "residual_drop_pct": 13.890493756778563
       },
       {
-        "trajectory": 6000,
+        "trajectory": 7500,
         "timestep": 22,
-        "baseline_mse": 0.018558556213974953,
-        "adapted_mse": 0.017978601157665253,
-        "improvement_pct": 3.1250009409297834,
-        "residual_drop_pct": 20.502006994091488
-      },
-      {
-        "trajectory": 8000,
-        "timestep": 26,
-        "baseline_mse": 0.0030115393456071615,
-        "adapted_mse": 0.0030115393456071615,
-        "improvement_pct": 0.0,
-        "residual_drop_pct": 0.0
+        "baseline_mse": 0.0005744511727243662,
+        "adapted_mse": 0.0009635997703298926,
+        "improvement_pct": -67.742676154697,
+        "residual_drop_pct": 11.10129865144252
       }
     ]
   },
   "coarse": {
     "name": "Resolution Scale Shift (N=512, 2x Edge Lengths)",
     "num_nodes": 512,
-    "mean_baseline_mse": 0.050043124496005474,
-    "mean_adapted_mse": 0.038147307257167994,
-    "mean_baseline_rel_mse": 0.03137839465791713,
-    "mean_adapted_rel_mse": 0.02669351289730782,
-    "error_reduction_pct": 23.77113211583546,
-    "mean_residual_drop_pct": 6.483182841567765,
+    "mean_baseline_mse": 0.003488488982839044,
+    "mean_adapted_mse": 0.003767764417716535,
+    "mean_baseline_rel_mse": 0.011527442792779685,
+    "mean_adapted_rel_mse": 0.015636846040041525,
+    "error_reduction_pct": -8.005627543940452,
+    "mean_residual_drop_pct": -21.982548504494478,
     "samples": [
       {
         "trajectory": 0,
@@ -122,36 +106,28 @@
         "residual_drop_pct": 13.379002442578436
       },
       {
-        "trajectory": 2000,
+        "trajectory": 2500,
         "timestep": 14,
-        "baseline_mse": 0.0103451581671834,
-        "adapted_mse": 0.009975019842386246,
-        "improvement_pct": 3.577889470760294,
-        "residual_drop_pct": 6.771513772216747
+        "baseline_mse": 3.2964482670649886e-05,
+        "adapted_mse": 0.00013256720558274537,
+        "improvement_pct": -302.1516336453153,
+        "residual_drop_pct": -73.78714394760534
       },
       {
-        "trajectory": 4000,
+        "trajectory": 5000,
         "timestep": 18,
-        "baseline_mse": 0.21366360783576965,
-        "adapted_mse": 0.15680813789367676,
-        "improvement_pct": 26.609805253215736,
-        "residual_drop_pct": 18.034328625910963
+        "baseline_mse": 0.011588726192712784,
+        "adapted_mse": 0.012337032705545425,
+        "improvement_pct": -6.457193831218406,
+        "residual_drop_pct": 3.9664499178921795
       },
       {
-        "trajectory": 6000,
+        "trajectory": 7500,
         "timestep": 22,
-        "baseline_mse": 0.019832512363791466,
-        "adapted_mse": 0.017501384019851685,
-        "improvement_pct": 11.75407483015495,
-        "residual_drop_pct": 11.043959494266115
-      },
-      {
-        "trajectory": 8000,
-        "timestep": 26,
-        "baseline_mse": 0.004611580166965723,
-        "adapted_mse": 0.004978168290108442,
-        "improvement_pct": -7.949295249570016,
-        "residual_drop_pct": -16.812890127133446
+        "baseline_mse": 0.0005695013096556067,
+        "adapted_mse": 0.001127631519921124,
+        "improvement_pct": -98.003323399385,
+        "residual_drop_pct": -31.488502430843184
       }
     ]
   }
