@@ -298,6 +298,48 @@ app.get("/api/evaluate-geometric/cached", (req, res) => {
   return res.json({ success: false, message: "No cached geometric benchmark results yet." });
 });
 
+// ─── GET /api/evaluate-ablations/cached ──────────────────────────────────────
+app.get("/api/evaluate-ablations/cached", (req, res) => {
+  const jsonPath = path.join(SCRIPTS_DIR, "ablation_benchmark_results.json");
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+      return res.json({ success: true, results: data });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+  return res.json({ success: false, message: "No cached ablation benchmark results yet." });
+});
+
+// ─── POST /api/evaluate-ablations ───────────────────────────────────────────
+app.post("/api/evaluate-ablations", async (req, res) => {
+  try {
+    const {
+      dataPath = DEFAULT_DATA_PATH,
+      checkpointPath = DEFAULT_CKPT_PATH,
+      numSamples = 6,
+    } = req.body;
+
+    const jsonPath = path.join(SCRIPTS_DIR, "ablation_benchmark_results.json");
+    const args = [
+      "--data_path", dataPath,
+      "--checkpoint_path", checkpointPath,
+      "--num_samples", String(numSamples),
+      "--output_json", jsonPath,
+    ];
+
+    await runPython("evaluate_ablations.py", args);
+    if (fs.existsSync(jsonPath)) {
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+      return res.json({ success: true, results: data });
+    }
+    res.json({ success: false, error: "Failed to generate ablation output." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 

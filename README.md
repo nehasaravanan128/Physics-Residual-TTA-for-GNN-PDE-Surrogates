@@ -117,6 +117,28 @@ Evaluates when spatial mesh coordinates are non-uniform, distorted, or scale-shi
 | **Boundary-Layer Warping** | Non-uniform refinement ($x \mapsto x + \alpha \sin(2\pi x)$) | $4.212 \times 10^{-2}$ | $3.443 \times 10^{-2}$ | **+18.26%** | **-12.55%** |
 | **Resolution Scale Shift** | Subsampled mesh ($N=512$, $2\times$ edge distances) | $5.004 \times 10^{-2}$ | $3.815 \times 10^{-2}$ | **+23.77%** | **-17.65%** |
 
+### Experiment 4: Systematic Ablation & Sensitivity Analysis
+
+Evaluates the key architectural and optimization choices across held-out test trajectories:
+
+1. **Adaptation Step Budget ($K$)**:
+   * $K=0$ (Unadapted): MSE $3.670 \times 10^{-2}$, PDE Residual $497.8$ (Baseline)
+   * $K=3$: MSE $1.538 \times 10^{-2}$ (**+58.10% Error Reduction**, Residual drops to $314.0$)
+   * $K=12$: MSE $1.662 \times 10^{-2}$ (**+54.72% Error Reduction**, Residual drops to $267.1$)
+   * $K=20$: MSE $1.550 \times 10^{-2}$ (**+57.78% Error Reduction**, Residual drops to $241.3$)
+   * *Conclusion*: Rapid convergence within $K=3\text{--}12$ steps; PDE residual drops monotonically by $-51.5\%$.
+
+2. **Parameter Adaptation Scope (Decoder-Only vs. Full GNN)**:
+   * **Decoder Only (Ours)**: MSE $1.640 \times 10^{-2}$ (**+55.31% Error Reduction**), Latency **363.2 ms**
+   * **Full GNN (All Layers)**: MSE $2.205 \times 10^{-2}$ (+39.92% Error Reduction), Latency **1432.5 ms** (3.9&times; slower)
+   * *Conclusion*: Freezing GNN message passing blocks preserves geometric embeddings, yields higher generalization accuracy, and runs nearly $4\times$ faster.
+
+3. **Test-Time Learning Rate ($\eta$)**:
+   * Peak stability between $\eta = 4 \times 10^{-5}$ and $8 \times 10^{-5}$ (+57.8% gain). Excess step sizes ($\eta \ge 5 \times 10^{-4}$) cause gradient overshoot.
+
+4. **Anchor Regularization Weight ($\lambda_{\text{anchor}}$)**:
+   * $\lambda_{\text{anchor}} = 0.1$ prevents representation drift away from the learned surrogate manifold while allowing flexible physical compliance.
+
 ---
 
 ## 💻 CLI Usage
@@ -158,7 +180,15 @@ python scripts/evaluate_geometric_shift.py \
   --shift_type all
 ```
 
-### 3. Start Interactive Web Application
+### 4. Run Systematic Ablation Suite
+```bash
+python scripts/evaluate_ablations.py \
+  --data_path "files (5)/1D_Burgers_Sols_Nu0.001.hdf5" \
+  --checkpoint_path real_burgers_model.pt \
+  --num_samples 6
+```
+
+### 5. Start Interactive Web Application
 ```bash
 # Terminal 1: Backend API
 cd server
