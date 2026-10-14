@@ -340,6 +340,73 @@ app.post("/api/evaluate-ablations", async (req, res) => {
   }
 });
 
+// ─── GET /api/datasets-catalog ──────────────────────────────────────────────
+app.get("/api/datasets-catalog", async (req, res) => {
+  const datasetsDir = path.join(ROOT, "datasets");
+  const catalog = [
+    { key: "burgers_1d", name: "1D Burgers' Equation", type: "1D", dim: "1D", file: "burgers_1d.hdf5", eq: "1D Viscous Burgers" },
+    { key: "heat_2d", name: "2D Heat/Diffusion", type: "2D", dim: "2D Continuous", file: "heat_2d.hdf5", eq: "2D Diffusion" },
+    { key: "advection_2d", name: "2D Advection Flow", type: "2D", dim: "2D Continuous", file: "advection_2d.hdf5", eq: "2D Passive Scalar Advection" },
+    { key: "burgers_2d", name: "2D Coupled Burgers", type: "2D", dim: "2D Vector", file: "burgers_2d.hdf5", eq: "2D Coupled Burgers" },
+    { key: "navier_stokes_2d", name: "2D Navier-Stokes", type: "2D", dim: "2D Turbulence", file: "navier_stokes_2d.hdf5", eq: "2D Vorticity-Stream Function" },
+    { key: "cylinder_flow_2d", name: "2D Cylinder Flow", type: "2D_Shape", dim: "Karman Vortex", file: "cylinder_flow_2d.hdf5", shape: "Circular Cylinder" },
+    { key: "airfoil_flow_2d", name: "2D NACA 0012 Airfoil", type: "2D_Shape", dim: "Aerodynamic Wake", file: "airfoil_flow_2d.hdf5", shape: "NACA Airfoil" },
+    { key: "square_flow_2d", name: "2D Square Bluff Body", type: "2D_Shape", dim: "Sharp Recirculation", file: "square_flow_2d.hdf5", shape: "Square Obstacle" },
+    { key: "step_flow_2d", name: "2D Backward-Facing Step", type: "2D_Shape", dim: "Channel Expansion", file: "step_flow_2d.hdf5", shape: "Step Channel" },
+    { key: "multi_cylinder_flow_2d", name: "2D Multi-Cylinder Array", type: "2D_Shape", dim: "Interfering Wakes", file: "multi_cylinder_flow_2d.hdf5", shape: "Dual Cylinder" },
+  ];
+
+  const enriched = catalog.map(item => {
+    const fpath = path.join(datasetsDir, item.file);
+    const exists = fs.existsSync(fpath);
+    const sizeMb = exists ? (fs.statSync(fpath).size / 1024 / 1024).toFixed(2) : 0;
+    return { ...item, exists, sizeMb: Number(sizeMb) };
+  });
+
+  res.json({ success: true, datasets: enriched });
+});
+
+// ─── GET /api/evaluate-2d/cached ─────────────────────────────────────────────
+app.get("/api/evaluate-2d/cached", (req, res) => {
+  const jsonPath = path.join(SCRIPTS_DIR, "benchmark_2d_results.json");
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+      return res.json({ success: true, results: data });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+  return res.json({ success: false, message: "No cached 2D benchmark results yet." });
+});
+
+// ─── POST /api/evaluate-2d ───────────────────────────────────────────────────
+app.post("/api/evaluate-2d", async (req, res) => {
+  try {
+    const jsonPath = path.join(SCRIPTS_DIR, "benchmark_2d_results.json");
+    await runPython("evaluate_2d_benchmarks.py", []);
+    if (fs.existsSync(jsonPath)) {
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+      return res.json({ success: true, results: data });
+    }
+    res.json({ success: false, error: "Failed to generate 2D benchmark results." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/generate-dataset ─────────────────────────────────────────────
+app.post("/api/generate-dataset", async (req, res) => {
+  const { key = "all" } = req.body;
+  try {
+    const args = ["--key", key, "--force_synth"];
+    await runPython("download_pde_datasets.py", args);
+    res.json({ success: true, message: `Dataset '${key}' synthesized successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 

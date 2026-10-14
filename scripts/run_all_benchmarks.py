@@ -144,6 +144,28 @@ def main():
         "--output_json", abl_json_path,
     ])
 
+    # 5. 2D Shapes & Multi-Model Benchmark Suite
+    print("\n[5/5] Running 2D Shapes & Multi-Model Benchmark Suite...")
+    bench2d_json_path = os.path.join(SCRIPTS_DIR, "benchmark_2d_results.json")
+    run_cmd([
+        sys.executable,
+        os.path.join(SCRIPTS_DIR, "evaluate_2d_benchmarks.py"),
+    ])
+    if os.path.exists(bench2d_json_path):
+        with open(bench2d_json_path, "r", encoding="utf-8") as f:
+            b2d_data = json.load(f)
+            for row in b2d_data.get("summary", []):
+                gain_sign = "+" if row["error_reduction_pct"] >= 0 else ""
+                res_sign = "-" if row["residual_drop_pct"] >= 0 else "+"
+                summary_records.append({
+                    "Experiment": f"5. 2D Benchmark: {row['shape']} ({row['model']})",
+                    "Discretization": f"{row['grid']}",
+                    "Baseline MSE": f"{row['baseline_mse']:.4e}",
+                    "Physics TTA MSE": f"{row['adapted_mse']:.4e}",
+                    "Error Reduction (%)": f"{gain_sign}{row['error_reduction_pct']:.2f}%",
+                    "Residual Drop (%)": f"{res_sign}{abs(row['residual_drop_pct']):.2f}%",
+                })
+
     # Export to CSV
     csv_path = os.path.join(ROOT_DIR, "benchmark_summary.csv")
     if summary_records:

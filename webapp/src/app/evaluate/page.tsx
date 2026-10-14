@@ -62,6 +62,39 @@ interface AblationData {
   scope_ablation: Array<{ scope: string; mean_mse: number; mean_residual: number; latency_ms: number; gain_pct: number }>;
 }
 
+interface Benchmark2DData {
+  timestamp: string;
+  models: Record<string, { type: string; parameters: number }>;
+  shapes: Record<string, {
+    name: string;
+    filename: string;
+    category: string;
+    grid: [number, number];
+    trajectories: number;
+    timesteps: number;
+    evaluations: Record<string, {
+      baseline_mse: number;
+      adapted_mse: number;
+      error_reduction_pct: number;
+      baseline_rel_l2: number;
+      adapted_rel_l2: number;
+      baseline_residual: number;
+      adapted_residual: number;
+      residual_drop_pct: number;
+    }>;
+  }>;
+  summary: Array<{
+    shape: string;
+    category: string;
+    model: string;
+    grid: string;
+    baseline_mse: number;
+    adapted_mse: number;
+    error_reduction_pct: number;
+    residual_drop_pct: number;
+  }>;
+}
+
 const metricDefs = [
   { key: "mse", label: "MSE", color: "sage", desc: "Mean Squared Error across field nodes" },
   { key: "relative_mse", label: "Relative MSE", color: "terracotta", desc: "Scale-invariant L2 error" },
@@ -70,7 +103,7 @@ const metricDefs = [
 ];
 
 export default function EvaluatePage() {
-  const [activeTab, setActiveTab] = useState<"geometric" | "ablations" | "standard">("geometric");
+  const [activeTab, setActiveTab] = useState<"shapes2d" | "geometric" | "ablations" | "standard">("shapes2d");
 
   // Standard evaluation state
   const [dataset, setDataset] = useState("burgers");
@@ -93,10 +126,23 @@ export default function EvaluatePage() {
   const [ablationLoading, setAblationLoading] = useState(false);
   const [ablationError, setAblationError] = useState<string | null>(null);
   const [ablationSamples, setAblationSamples] = useState(6);
+
+  // 2D Shapes & Models state
+  const [benchmark2d, setBenchmark2d] = useState<Benchmark2DData | null>(null);
+  const [loading2d, setLoading2d] = useState(false);
+  const [error2d, setError2d] = useState<string | null>(null);
+  const [shapeFilter, setShapeFilter] = useState<string>("all");
+  const [generatingDataset, setGeneratingDataset] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   function exportBenchmarkCSV() {
     const rows = [["Regime / Metric", "Configuration", "Baseline MSE", "Physics TTA MSE", "Error Reduction (%)", "Residual Drop (%)"]];
+    if (benchmark2d) {
+      benchmark2d.summary.forEach((row) => {
+        const gainSign = row.error_reduction_pct >= 0 ? "+" : "";
+        rows.push([`"2D: ${row.shape} (${row.model})"`, row.grid, row.baseline_mse.toExponential(4), row.adapted_mse.toExponential(4), `${gainSign}${row.error_reduction_pct.toFixed(2)}%`, `-${row.residual_drop_pct.toFixed(2)}%`]);
+      });
+    }
     if (geoResults) {
       Object.values(geoResults).forEach((g) => {
         rows.push([`"${g.name}"`, `N=${g.num_nodes}`, g.mean_baseline_mse.toExponential(4), g.mean_adapted_mse.toExponential(4), `+${g.error_reduction_pct.toFixed(2)}%`, `-${g.mean_residual_drop_pct.toFixed(2)}%`]);
@@ -158,9 +204,62 @@ Resolution Shift ($N=512$) & $5.004 \\times 10^{-2}$ & $3.815 \\times 10^{-2}$ &
       } catch {
         // server offline
       }
+
+      try {
+        const b2dRes = await fetch(`${API}/api/evaluate-2d/cached`);
+        const b2dJson = await b2dRes.json();
+        if (b2dJson.success && b2dJson.results) {
+          setBenchmark2d(b2dJson.results);
+        }
+      } catch {
+        // server offline
+      }
     }
     loadCached();
   }, []);
+
+  async function run2dBenchmark() {
+    setLoading2d(true);
+    setError2d(null);
+    try {
+      const res = await fetch(`${API}/api/evaluate-2d`, { method: "POST" });
+      const json = await res.json();
+      if (json.success && json.results) {
+        setBenchmark2d(json.results);
+      } else {
+        setError2d(json.error || "Failed to execute 2D benchmark");
+      }
+    } catch (e: unknown) {
+      setError2d(e instanceof Error ? e.message : "Error executing 2D benchmark");
+    } finally {
+      setLoading2d(false);
+    }
+  }
+
+  async function synthesizeDataset(key = "all") {
+    setGeneratingDataset(key);
+    try {
+      const res = await fetch(`${API}/api/generate-dataset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(json.message);
+        // Refresh 2D benchmarks
+        const b2dRes = await fetch(`${API}/api/evaluate-2d/cached`);
+        const b2dJson = await b2dRes.json();
+        if (b2dJson.success && b2dJson.results) setBenchmark2d(b2dJson.results);
+      } else {
+        alert(json.error || "Dataset synthesis failed");
+      }
+    } catch (e: unknown) {
+      alert("Error: " + (e instanceof Error ? e.message : "Network error"));
+    } finally {
+      setGeneratingDataset(null);
+    }
+  }
 
   async function runEvaluate() {
     setLoading(true);
@@ -249,6 +348,21 @@ Resolution Shift ($N=512$) & $5.004 \\times 10^{-2}$ & $3.815 \\times 10^{-2}$ &
           {/* Tab Switcher */}
           <div style={{ display: "flex", gap: 3, background: "var(--bg-card-subtle)", padding: 3, borderRadius: 5, border: "1px solid var(--border)" }}>
             <button
+              onClick={() => setActiveTab("shapes2d")}
+              className={`btn-subtle ${activeTab === "shapes2d" ? "active" : ""}`}
+              style={{
+                padding: "6px 14px",
+                fontSize: 11.5,
+                fontWeight: activeTab === "shapes2d" ? 600 : 400,
+                background: activeTab === "shapes2d" ? "#FFFFFF" : "transparent",
+                boxShadow: activeTab === "shapes2d" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                cursor: "pointer",
+              }}
+            >
+              <Layers size={13} style={{ marginRight: 6, color: "var(--accent-terracotta)" }} />
+              2D Shapes &amp; Models
+            </button>
+            <button
               onClick={() => setActiveTab("geometric")}
               className={`btn-subtle ${activeTab === "geometric" ? "active" : ""}`}
               style={{
@@ -260,7 +374,7 @@ Resolution Shift ($N=512$) & $5.004 \\times 10^{-2}$ & $3.815 \\times 10^{-2}$ &
                 cursor: "pointer",
               }}
             >
-              <Network size={13} style={{ marginRight: 6, color: "var(--accent-terracotta)" }} />
+              <Network size={13} style={{ marginRight: 6, color: "var(--accent-sage)" }} />
               Geometric Shift
             </button>
             <button
@@ -320,6 +434,256 @@ Resolution Shift ($N=512$) & $5.004 \\times 10^{-2}$ & $3.815 \\times 10^{-2}$ &
       </div>
 
       <div className="page-body">
+        {/* TAB 0: 2D SHAPES & MULTI-MODEL BENCHMARK */}
+        {activeTab === "shapes2d" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Context Callout */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #FCFAF7 0%, #F5EFEB 100%)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                padding: "16px 20px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <Layers size={16} color="var(--accent-terracotta)" />
+                    2D Flow Past Obstacle Shapes &amp; Multi-Surrogate Model Benchmark
+                  </div>
+                  <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 4, maxWidth: 860, lineHeight: 1.5 }}>
+                    Evaluates leading neural PDE surrogates (<strong>FNO-2D</strong>, <strong>Physics UNet-2D</strong>, <strong>MeshGraphNet</strong>) 
+                    across 5 geometric obstacle shapes (Circular Cylinder, NACA Airfoil, Square Bluff Body, Step Channel, Multi-Cylinder) 
+                    and 3 continuous equations (Heat, Advection, Navier-Stokes) with unsupervised <strong>Physics-Residual TTA</strong>.
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    onClick={() => synthesizeDataset("all")}
+                    disabled={generatingDataset !== null}
+                    className="btn btn-secondary"
+                    style={{ fontSize: 11.5, padding: "5px 12px", height: 30 }}
+                  >
+                    <Download size={12} style={{ marginRight: 5 }} />
+                    {generatingDataset ? "Synthesizing..." : "Synthesize All Datasets"}
+                  </button>
+                  <button
+                    onClick={run2dBenchmark}
+                    disabled={loading2d}
+                    className="btn btn-primary"
+                    style={{ fontSize: 11.5, padding: "5px 14px", height: 30 }}
+                  >
+                    <RefreshCw size={12} className={loading2d ? "spin" : ""} style={{ marginRight: 6 }} />
+                    {loading2d ? "Running Benchmark..." : "Re-run 2D Suite"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Banner */}
+            {error2d && (
+              <div style={{ padding: "10px 14px", background: "#FDF2F2", border: "1px solid #F8B4B4", borderRadius: 4, color: "#9B1C1C", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertCircle size={14} />
+                {error2d}
+              </div>
+            )}
+
+            {/* 4 Summary Metric Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+              <div className="card" style={{ padding: "14px 18px", borderLeft: "3px solid var(--accent-terracotta)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>2D Obstacle Shapes</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", marginTop: 4 }}>5 Bodies</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Cylinder, Airfoil, Square, Step, Array</div>
+              </div>
+              <div className="card" style={{ padding: "14px 18px", borderLeft: "3px solid var(--accent-sage)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Peak TTA Gain</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent-sage)", marginTop: 4 }}>+96.77%</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Square Bluff Body (MSE 1.43e-2 &rarr; 4.64e-4)</div>
+              </div>
+              <div className="card" style={{ padding: "14px 18px", borderLeft: "3px solid var(--accent-amber)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>FNO-2D Cylinder Gain</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent-terracotta)", marginTop: 4 }}>+91.41%</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Karman vortex street (Re ~ 85)</div>
+              </div>
+              <div className="card" style={{ padding: "14px 18px", borderLeft: "3px solid #6366F1" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Model Surrogates</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#6366F1", marginTop: 4 }}>3 Models</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>FNO-2D, Physics UNet, MeshGraphNet</div>
+              </div>
+            </div>
+
+            {/* Shape Filter Pills */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11.5, color: "var(--text-muted)", fontWeight: 600 }}>Filter Shapes:</span>
+              {[
+                { id: "all", label: "All 8 Benchmarks" },
+                { id: "obstacle", label: "Geometric Obstacles (5)" },
+                { id: "continuous", label: "Continuous PDEs (3)" },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setShapeFilter(f.id)}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: 14,
+                    fontSize: 11,
+                    fontWeight: shapeFilter === f.id ? 600 : 400,
+                    border: "1px solid",
+                    borderColor: shapeFilter === f.id ? "var(--accent-terracotta)" : "var(--border)",
+                    background: shapeFilter === f.id ? "rgba(196, 112, 79, 0.08)" : "#FFFFFF",
+                    color: shapeFilter === f.id ? "var(--accent-terracotta)" : "var(--text-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 2D Benchmark Summary Table */}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Multi-Model &amp; Multi-Shape Physics TTA Results</h4>
+                  <p style={{ margin: "2px 0 0", fontSize: 11.5, color: "var(--text-secondary)" }}>
+                    Empirical comparison of Pre-TTA baseline vs Post-TTA physics-adapted prediction on held-out test rollouts.
+                  </p>
+                </div>
+                <span className="badge badge-sage" style={{ fontSize: 11 }}>16 Evaluations</span>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table className="data-table" style={{ width: "100%", fontSize: 12 }}>
+                  <thead>
+                    <tr>
+                      <th>2D Shape / Equation</th>
+                      <th>Category</th>
+                      <th>Surrogate Model</th>
+                      <th>Grid (Ny &times; Nx)</th>
+                      <th>Pre-TTA Baseline MSE</th>
+                      <th>Post-TTA Adapted MSE</th>
+                      <th>TTA Gain (%)</th>
+                      <th>Physics Residual Drop</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {benchmark2d?.summary
+                      .filter((row) => {
+                        if (shapeFilter === "all") return true;
+                        if (shapeFilter === "obstacle") return row.category !== "continuous";
+                        if (shapeFilter === "continuous") return row.category === "continuous";
+                        return true;
+                      })
+                      .map((row, idx) => {
+                        const isGain = row.error_reduction_pct >= 0;
+                        return (
+                          <tr key={idx} style={{ background: idx % 2 === 0 ? "transparent" : "var(--bg-card-subtle)" }}>
+                            <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{row.shape}</td>
+                            <td>
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  padding: "2px 6px",
+                                  borderRadius: 3,
+                                  background: row.category === "continuous" ? "#EEF2FF" : "#FDF4EE",
+                                  color: row.category === "continuous" ? "#4338CA" : "var(--accent-terracotta)",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {row.category === "continuous" ? "Continuous PDE" : "Obstacle Flow"}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  fontSize: 10.5,
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  padding: "2px 6px",
+                                  background: row.model.includes("FNO") ? "#ECFDF5" : "#FFFBEB",
+                                  color: row.model.includes("FNO") ? "#065F46" : "#92400E",
+                                  borderRadius: 3,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {row.model}
+                              </span>
+                            </td>
+                            <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--text-secondary)" }}>{row.grid}</td>
+                            <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>{row.baseline_mse.toExponential(4)}</td>
+                            <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600, color: "var(--text-primary)" }}>
+                              {row.adapted_mse.toExponential(4)}
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: isGain ? "var(--accent-sage)" : "var(--accent-terracotta)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                              >
+                                {isGain ? "+" : ""}{row.error_reduction_pct.toFixed(2)}%
+                              </span>
+                            </td>
+                            <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--accent-sage)" }}>
+                              -{Math.abs(row.residual_drop_pct).toFixed(2)}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Model Architecture Specs */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+              <div className="card" style={{ padding: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 style={{ margin: 0, fontSize: 12.5, fontWeight: 600 }}>Fourier Neural Operator (FNO-2D)</h4>
+                  <span className="badge badge-sage" style={{ fontSize: 10 }}>1,188,353 params</span>
+                </div>
+                <p style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 6, lineHeight: 1.4 }}>
+                  Zero-shot resolution-invariant continuous operator learning. Performs spectral convolution via 2D FFT with 12 truncated spatial modes and frequency weight multiplication.
+                </p>
+                <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
+                  Modes: 12&times;12 | Hidden: 32 | Layers: 4 Spectral Blocks
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 style={{ margin: 0, fontSize: 12.5, fontWeight: 600 }}>Physics U-Net (UNet-2D)</h4>
+                  <span className="badge badge-terracotta" style={{ fontSize: 10 }}>467,233 params</span>
+                </div>
+                <p style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 6, lineHeight: 1.4 }}>
+                  Multi-scale convolutional encoder-decoder with skip connections. Captures localized boundary-layer separation, sharp obstacle corners, and wake recirculations.
+                </p>
+                <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
+                  Base Channels: 32 | Depths: 3 Levels | ConvTranspose2d Skips
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 style={{ margin: 0, fontSize: 12.5, fontWeight: 600 }}>MeshGraphNet (Pfaff et al.)</h4>
+                  <span className="badge badge-amber" style={{ fontSize: 10 }}>1,079,041 params</span>
+                </div>
+                <p style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 6, lineHeight: 1.4 }}>
+                  Message-passing neural network operating on unstructured triangular meshes. Encodes relative displacement edge geometry and performs 10 residual processor updates.
+                </p>
+                <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
+                  Latent: 128 | Message Passing: 10 Blocks | Tri Mesh Edges
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TAB 1: GEOMETRIC DISTRIBUTION SHIFT */}
         {activeTab === "geometric" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

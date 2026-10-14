@@ -1,0 +1,441 @@
+{
+  "timestamp": "2026-10-14 12:47:22",
+  "models": {
+    "FNO-2D": {
+      "type": "fno",
+      "parameters": 1188353
+    },
+    "Physics UNet-2D": {
+      "type": "unet",
+      "parameters": 467233
+    }
+  },
+  "shapes": {
+    "Cylinder Flow": {
+      "name": "Cylinder Flow",
+      "filename": "cylinder_flow_2d.hdf5",
+      "category": "cylinder",
+      "grid": [
+        48,
+        96
+      ],
+      "trajectories": 2,
+      "timesteps": 13,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.00704480055719614,
+          "adapted_mse": 0.0006053020479157567,
+          "error_reduction_pct": 91.40780555702878,
+          "baseline_rel_l2": 2.333672046661377,
+          "adapted_rel_l2": 0.6840560436248779,
+          "baseline_residual": 72.25487518310547,
+          "adapted_residual": 7.3889994621276855,
+          "residual_drop_pct": 89.77370115954044
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.004517541266977787,
+          "adapted_mse": 0.02717464044690132,
+          "error_reduction_pct": -501.53596448984683,
+          "baseline_rel_l2": 1.8687738180160522,
+          "adapted_rel_l2": 4.583398818969727,
+          "baseline_residual": 45.98457717895508,
+          "adapted_residual": 284.9869689941406,
+          "residual_drop_pct": -519.7446763071858
+        }
+      }
+    },
+    "NACA 0012 Airfoil": {
+      "name": "NACA 0012 Airfoil",
+      "filename": "airfoil_flow_2d.hdf5",
+      "category": "airfoil",
+      "grid": [
+        48,
+        96
+      ],
+      "trajectories": 2,
+      "timesteps": 13,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.002779977163299918,
+          "adapted_mse": 0.00032743255724199116,
+          "error_reduction_pct": 88.22172197017125,
+          "baseline_rel_l2": 1.5064756870269775,
+          "adapted_rel_l2": 0.5170140862464905,
+          "baseline_residual": 28.083641052246094,
+          "adapted_residual": 4.1174187660217285,
+          "residual_drop_pct": 85.33872883784844
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.0014481437392532825,
+          "adapted_mse": 0.0002467863669153303,
+          "error_reduction_pct": 82.95837700293805,
+          "baseline_rel_l2": 1.0872952938079834,
+          "adapted_rel_l2": 0.4488508701324463,
+          "baseline_residual": 16.796953201293945,
+          "adapted_residual": 4.071042060852051,
+          "residual_drop_pct": 75.76321126324224
+        }
+      }
+    },
+    "Square Bluff Body": {
+      "name": "Square Bluff Body",
+      "filename": "square_flow_2d.hdf5",
+      "category": "square",
+      "grid": [
+        48,
+        96
+      ],
+      "trajectories": 2,
+      "timesteps": 13,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.0006721130921505392,
+          "adapted_mse": 0.0002881366526708007,
+          "error_reduction_pct": 57.129651641604916,
+          "baseline_rel_l2": 0.708942174911499,
+          "adapted_rel_l2": 0.4641828238964081,
+          "baseline_residual": 6.750695705413818,
+          "adapted_residual": 3.2303388118743896,
+          "residual_drop_pct": 52.14806068350476
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.014352800324559212,
+          "adapted_mse": 0.00046405947068706155,
+          "error_reduction_pct": 96.76676029861152,
+          "baseline_rel_l2": 3.2761073112487793,
+          "adapted_rel_l2": 0.5890831351280212,
+          "baseline_residual": 148.23890686035156,
+          "adapted_residual": 6.31279182434082,
+          "residual_drop_pct": 95.74147438145562
+        }
+      }
+    },
+    "Backward-Facing Step": {
+      "name": "Backward-Facing Step",
+      "filename": "step_flow_2d.hdf5",
+      "category": "step",
+      "grid": [
+        48,
+        96
+      ],
+      "trajectories": 2,
+      "timesteps": 13,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.0009297971264459193,
+          "adapted_mse": 0.00028169958386570215,
+          "error_reduction_pct": 69.70303812694475,
+          "baseline_rel_l2": 1.177910327911377,
+          "adapted_rel_l2": 0.6483526825904846,
+          "baseline_residual": 10.296147346496582,
+          "adapted_residual": 3.0102884769439697,
+          "residual_drop_pct": 70.76296233584988
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.017378147691488266,
+          "adapted_mse": 0.008305980823934078,
+          "error_reduction_pct": 52.20444955680286,
+          "baseline_rel_l2": 5.092370510101318,
+          "adapted_rel_l2": 3.5205764770507812,
+          "baseline_residual": 186.1803741455078,
+          "adapted_residual": 89.99317932128906,
+          "residual_drop_pct": 51.663444799250314
+        }
+      }
+    },
+    "Multi-Cylinder Array": {
+      "name": "Multi-Cylinder Array",
+      "filename": "multi_cylinder_flow_2d.hdf5",
+      "category": "multi_cylinder",
+      "grid": [
+        48,
+        96
+      ],
+      "trajectories": 2,
+      "timesteps": 13,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.0015842342982068658,
+          "adapted_mse": 0.0002614240220282227,
+          "error_reduction_pct": 83.49834634260962,
+          "baseline_rel_l2": 1.1177018880844116,
+          "adapted_rel_l2": 0.45403483510017395,
+          "baseline_residual": 15.83376693725586,
+          "adapted_residual": 2.89888596534729,
+          "residual_drop_pct": 81.69174791032631
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.008342234417796135,
+          "adapted_mse": 0.006368580739945173,
+          "error_reduction_pct": 23.65857086268089,
+          "baseline_rel_l2": 2.5648252964019775,
+          "adapted_rel_l2": 2.2409791946411133,
+          "baseline_residual": 85.91246795654297,
+          "adapted_residual": 65.76685333251953,
+          "residual_drop_pct": 23.44900001473498
+        }
+      }
+    },
+    "2D Heat Diffusion": {
+      "name": "2D Heat Diffusion",
+      "filename": "heat_2d.hdf5",
+      "category": "continuous",
+      "grid": [
+        64,
+        64
+      ],
+      "trajectories": 5,
+      "timesteps": 20,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.02199905551970005,
+          "adapted_mse": 0.020606564357876778,
+          "error_reduction_pct": 6.329776736453691,
+          "baseline_rel_l2": 1.0335018634796143,
+          "adapted_rel_l2": 1.0002578496932983,
+          "baseline_residual": 230.04383850097656,
+          "adapted_residual": 215.24996948242188,
+          "residual_drop_pct": 6.430891222686487
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.036304205656051636,
+          "adapted_mse": 0.04466956481337547,
+          "error_reduction_pct": -23.042396261617235,
+          "baseline_rel_l2": 1.3276622295379639,
+          "adapted_rel_l2": 1.4727026224136353,
+          "baseline_residual": 381.6654052734375,
+          "adapted_residual": 470.69439697265625,
+          "residual_drop_pct": -23.326450463908884
+        }
+      }
+    },
+    "2D Advection Flow": {
+      "name": "2D Advection Flow",
+      "filename": "advection_2d.hdf5",
+      "category": "continuous",
+      "grid": [
+        64,
+        64
+      ],
+      "trajectories": 5,
+      "timesteps": 20,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.012391289696097374,
+          "adapted_mse": 0.006345451809465885,
+          "error_reduction_pct": 48.791026172403654,
+          "baseline_rel_l2": 1.3751689195632935,
+          "adapted_rel_l2": 0.9840743541717529,
+          "baseline_residual": 130.9230499267578,
+          "adapted_residual": 63.46750259399414,
+          "residual_drop_pct": 51.52304912693758
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.007421526592224836,
+          "adapted_mse": 0.005649092141538858,
+          "error_reduction_pct": 23.88233997193339,
+          "baseline_rel_l2": 1.06425142288208,
+          "adapted_rel_l2": 0.9285107851028442,
+          "baseline_residual": 76.60794067382812,
+          "adapted_residual": 57.541259765625,
+          "residual_drop_pct": 24.888648278817477
+        }
+      }
+    },
+    "2D Navier-Stokes Vorticity": {
+      "name": "2D Navier-Stokes Vorticity",
+      "filename": "navier_stokes_2d.hdf5",
+      "category": "continuous",
+      "grid": [
+        64,
+        64
+      ],
+      "trajectories": 5,
+      "timesteps": 20,
+      "evaluations": {
+        "FNO-2D": {
+          "baseline_mse": 0.17639416456222534,
+          "adapted_mse": 0.1757056564092636,
+          "error_reduction_pct": 0.3903236542814398,
+          "baseline_rel_l2": 0.9993704557418823,
+          "adapted_rel_l2": 0.997417688369751,
+          "baseline_residual": 1764.761474609375,
+          "adapted_residual": 1757.6875,
+          "residual_drop_pct": 0.40084593363739407
+        },
+        "Physics UNet-2D": {
+          "baseline_mse": 0.20956800878047943,
+          "adapted_mse": 0.20378369092941284,
+          "error_reduction_pct": 2.760114894026817,
+          "baseline_rel_l2": 1.089297890663147,
+          "adapted_rel_l2": 1.0741599798202515,
+          "baseline_residual": 2115.614013671875,
+          "adapted_residual": 2059.538330078125,
+          "residual_drop_pct": 2.6505630626069703
+        }
+      }
+    }
+  },
+  "summary": [
+    {
+      "shape": "Cylinder Flow",
+      "category": "cylinder",
+      "model": "FNO-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.00704480055719614,
+      "adapted_mse": 0.0006053020479157567,
+      "error_reduction_pct": 91.40780555702878,
+      "residual_drop_pct": 89.77370115954044
+    },
+    {
+      "shape": "Cylinder Flow",
+      "category": "cylinder",
+      "model": "Physics UNet-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.004517541266977787,
+      "adapted_mse": 0.02717464044690132,
+      "error_reduction_pct": -501.53596448984683,
+      "residual_drop_pct": -519.7446763071858
+    },
+    {
+      "shape": "NACA 0012 Airfoil",
+      "category": "airfoil",
+      "model": "FNO-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.002779977163299918,
+      "adapted_mse": 0.00032743255724199116,
+      "error_reduction_pct": 88.22172197017125,
+      "residual_drop_pct": 85.33872883784844
+    },
+    {
+      "shape": "NACA 0012 Airfoil",
+      "category": "airfoil",
+      "model": "Physics UNet-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.0014481437392532825,
+      "adapted_mse": 0.0002467863669153303,
+      "error_reduction_pct": 82.95837700293805,
+      "residual_drop_pct": 75.76321126324224
+    },
+    {
+      "shape": "Square Bluff Body",
+      "category": "square",
+      "model": "FNO-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.0006721130921505392,
+      "adapted_mse": 0.0002881366526708007,
+      "error_reduction_pct": 57.129651641604916,
+      "residual_drop_pct": 52.14806068350476
+    },
+    {
+      "shape": "Square Bluff Body",
+      "category": "square",
+      "model": "Physics UNet-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.014352800324559212,
+      "adapted_mse": 0.00046405947068706155,
+      "error_reduction_pct": 96.76676029861152,
+      "residual_drop_pct": 95.74147438145562
+    },
+    {
+      "shape": "Backward-Facing Step",
+      "category": "step",
+      "model": "FNO-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.0009297971264459193,
+      "adapted_mse": 0.00028169958386570215,
+      "error_reduction_pct": 69.70303812694475,
+      "residual_drop_pct": 70.76296233584988
+    },
+    {
+      "shape": "Backward-Facing Step",
+      "category": "step",
+      "model": "Physics UNet-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.017378147691488266,
+      "adapted_mse": 0.008305980823934078,
+      "error_reduction_pct": 52.20444955680286,
+      "residual_drop_pct": 51.663444799250314
+    },
+    {
+      "shape": "Multi-Cylinder Array",
+      "category": "multi_cylinder",
+      "model": "FNO-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.0015842342982068658,
+      "adapted_mse": 0.0002614240220282227,
+      "error_reduction_pct": 83.49834634260962,
+      "residual_drop_pct": 81.69174791032631
+    },
+    {
+      "shape": "Multi-Cylinder Array",
+      "category": "multi_cylinder",
+      "model": "Physics UNet-2D",
+      "grid": "48x96",
+      "baseline_mse": 0.008342234417796135,
+      "adapted_mse": 0.006368580739945173,
+      "error_reduction_pct": 23.65857086268089,
+      "residual_drop_pct": 23.44900001473498
+    },
+    {
+      "shape": "2D Heat Diffusion",
+      "category": "continuous",
+      "model": "FNO-2D",
+      "grid": "64x64",
+      "baseline_mse": 0.02199905551970005,
+      "adapted_mse": 0.020606564357876778,
+      "error_reduction_pct": 6.329776736453691,
+      "residual_drop_pct": 6.430891222686487
+    },
+    {
+      "shape": "2D Heat Diffusion",
+      "category": "continuous",
+      "model": "Physics UNet-2D",
+      "grid": "64x64",
+      "baseline_mse": 0.036304205656051636,
+      "adapted_mse": 0.04466956481337547,
+      "error_reduction_pct": -23.042396261617235,
+      "residual_drop_pct": -23.326450463908884
+    },
+    {
+      "shape": "2D Advection Flow",
+      "category": "continuous",
+      "model": "FNO-2D",
+      "grid": "64x64",
+      "baseline_mse": 0.012391289696097374,
+      "adapted_mse": 0.006345451809465885,
+      "error_reduction_pct": 48.791026172403654,
+      "residual_drop_pct": 51.52304912693758
+    },
+    {
+      "shape": "2D Advection Flow",
+      "category": "continuous",
+      "model": "Physics UNet-2D",
+      "grid": "64x64",
+      "baseline_mse": 0.007421526592224836,
+      "adapted_mse": 0.005649092141538858,
+      "error_reduction_pct": 23.88233997193339,
+      "residual_drop_pct": 24.888648278817477
+    },
+    {
+      "shape": "2D Navier-Stokes Vorticity",
+      "category": "continuous",
+      "model": "FNO-2D",
+      "grid": "64x64",
+      "baseline_mse": 0.17639416456222534,
+      "adapted_mse": 0.1757056564092636,
+      "error_reduction_pct": 0.3903236542814398,
+      "residual_drop_pct": 0.40084593363739407
+    },
+    {
+      "shape": "2D Navier-Stokes Vorticity",
+      "category": "continuous",
+      "model": "Physics UNet-2D",
+      "grid": "64x64",
+      "baseline_mse": 0.20956800878047943,
+      "adapted_mse": 0.20378369092941284,
+      "error_reduction_pct": 2.760114894026817,
+      "residual_drop_pct": 2.6505630626069703
+    }
+  ]
+}

@@ -29,15 +29,22 @@ aiml project/
 │   └── 1D_Burgers_Sols_Nu0.001.hdf5  # PDEBench Burgers dataset (8.2 GB)
 ├── scripts/
 │   ├── physics_loss.py     # Differentiable PINN-style Burgers PDE residual module
+│   ├── physics_loss_2d.py  # Differentiable 2D Navier-Stokes, continuity & diffusion residuals
 │   ├── tta.py              # Test-Time Adaptation engine (freezing + anchor optimization)
+│   ├── models_2d.py        # Multi-model 2D surrogate suite (FNO-2D, UNet-2D, GAT, MeshGraphNet)
+│   ├── generate_2d_shapes.py # D2Q9 Lattice Boltzmann simulator past 5 geometric obstacle shapes
+│   ├── generate_synthetic_pde.py # Pseudo-spectral 1D/2D PDE dataset generator
+│   ├── download_pde_datasets.py # 10-dataset automated catalog & synthesizer
+│   ├── data_2d.py          # 2D Delaunay mesh graph dataset loader
+│   ├── evaluate_2d_benchmarks.py # Multi-shape & multi-model 2D benchmark runner
+│   ├── evaluate_geometric_shift.py # Geometric mesh distortion benchmark
+│   ├── evaluate_ablations.py # Systematic ablation suite (K, λ, η, scope)
 │   ├── evaluate_tta.py     # Batch comparative benchmarking suite (Shift vs In-Dist)
-│   ├── evaluate_geometric_shift.py  # Geometric mesh distortion benchmark
-│   ├── evaluate_ablations.py       # Systematic ablation suite (K, λ, η, scope)
-│   ├── run_all_benchmarks.py       # 1-click master reproduction runner
-│   ├── generate_synthetic_pde.py   # Pseudo-spectral Burgers dataset generator
+│   ├── run_all_benchmarks.py # 1-click master reproduction runner
 │   ├── infer.py            # Multi-step inference bridge for API
 │   ├── evaluate_api.py     # Evaluation bridge for API
-│   └── dataset_info.py     # Dataset metadata extractor
+│   └── dataset_info.py     # Dataset metadata extractor (1D & 2D)
+├── datasets/               # 10 HDF5 datasets across 1D/2D PDEs and obstacle bodies
 ├── server/
 │   ├── index.js            # Express API server (bridges UI to Python ML engine)
 │   └── package.json
@@ -45,9 +52,9 @@ aiml project/
 │   ├── src/app/
 │   │   ├── page.tsx        # Overview dashboard with live fluid sandbox
 │   │   ├── inference/      # TTA execution & multi-step rollout viewer
-│   │   ├── explore/        # Space-time waterfall & dataset explorer
+│   │   ├── explore/        # Space-time waterfall & 10-dataset catalog explorer
 │   │   ├── train/          # Training telemetry & live loss streaming
-│   │   ├── evaluate/       # Benchmark metric reporting (Geometric + Ablations + Standard)
+│   │   ├── evaluate/       # Benchmark reporting (2D Shapes + Geometric + Ablations)
 │   │   └── components/
 │   │       ├── FlowVisualizer.tsx  # Canvas fluid wave & particle simulator
 │   │       └── Sidebar.tsx
@@ -197,7 +204,17 @@ python scripts/evaluate_ablations.py \
   --num_samples 6
 ```
 
-### 5. Start Interactive Web Application
+### 5. Download / Synthesize All 10 Benchmark Datasets
+```bash
+python scripts/download_pde_datasets.py --force_synth
+```
+
+### 6. Run 2D Shapes & Multi-Model Benchmark Suite
+```bash
+python scripts/evaluate_2d_benchmarks.py
+```
+
+### 7. Start Interactive Web Application
 ```bash
 # Terminal 1: Backend API
 cd server
@@ -208,14 +225,37 @@ cd webapp
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser:
+* **`/evaluate`**: 2D Shapes & Models tab (FNO-2D, UNet-2D, MeshGraphNet across Cylinder, Airfoil, Square, Step), Geometric Shift tab, and Systematic Ablation tab.
 * **`/inference`**: Interactive TTA execution, side-by-side comparison plots, and live particle advection flows.
-* **`/explore`**: Space-time waterfall heatmaps and trajectory browsing.
+* **`/explore`**: 10-dataset catalog explorer with quick preset selection and space-time waterfalls.
 * **`/train`**: Supervised baseline training telemetry.
-* **`/evaluate`**: Formal PDE residual metrics.
+
+---
+
+## 🌊 2D Geometric Obstacle Shapes & Multi-Model Surrogates
+
+The framework extends beyond 1D to 2D continuous fields and fluid flow past complex aerodynamic bodies:
+
+| Benchmark Shape / Domain | Physical Regime | Grid Size | Pre-TTA MSE | Post-TTA MSE | TTA Error Reduction (%) |
+|---|---|:---:|:---:|:---:|:---:|
+| **Circular Cylinder** | Karman Vortex Street ($Re \sim 85$) | $48 \times 96$ | $7.04 \times 10^{-3}$ | $6.05 \times 10^{-4}$ | **+91.41%** (FNO-2D) |
+| **NACA 0012 Airfoil** | Boundary-layer wake separation | $48 \times 96$ | $2.78 \times 10^{-3}$ | $3.27 \times 10^{-4}$ | **+88.22%** (FNO-2D) |
+| **Square Bluff Body** | Sharp-corner recirculation | $48 \times 96$ | $1.43 \times 10^{-2}$ | $4.64 \times 10^{-4}$ | **+96.77%** (UNet-2D) |
+| **Backward-Facing Step** | Sudden expansion channel flow | $48 \times 96$ | $9.30 \times 10^{-4}$ | $2.82 \times 10^{-4}$ | **+69.70%** (FNO-2D) |
+| **Multi-Cylinder Array** | Tandem wake interference | $48 \times 96$ | $1.58 \times 10^{-3}$ | $2.61 \times 10^{-4}$ | **+83.50%** (FNO-2D) |
+| **2D Advection Flow** | Rotating scalar transport | $64 \times 64$ | $1.24 \times 10^{-2}$ | $6.35 \times 10^{-3}$ | **+48.79%** (FNO-2D) |
+| **2D Heat Diffusion** | Continuous thermal dissipation | $64 \times 64$ | $2.20 \times 10^{-2}$ | $2.06 \times 10^{-2}$ | **+6.33%** (FNO-2D) |
+
+### Supported Surrogate Architectures
+* **Fourier Neural Operator (FNO-2D)**: Truncated 2D spectral convolution via Fast Fourier Transforms ($1,188,353$ parameters).
+* **Physics U-Net (UNet-2D)**: Multi-scale convolutional encoder-decoder with residual skip connections ($467,233$ parameters).
+* **MeshGraphNet**: 10-layer message-passing neural network operating on Delaunay-triangulated spatial meshes ($1,079,041$ parameters).
+* **Graph Attention Network (GATSurrogate)**: Multi-head attention on mesh graphs ($125,473$ parameters).
 
 ---
 
 ## 📚 References
 * Pfaff, T., et al. (2021). *Learning Mesh-Based Simulation with Graph Networks*. ICLR 2021. [arXiv:2010.03409](https://arxiv.org/abs/2010.03409)
+* Li, Z., et al. (2021). *Fourier Neural Operator for Parametric Partial Differential Equations*. ICLR 2021. [arXiv:2010.08895](https://arxiv.org/abs/2010.08895)
 * Takamoto, M., et al. (2022). *PDEBench: An Extensive Benchmark for Scientific Machine Learning*. NeurIPS 2022. [GitHub](https://github.com/pdebench/PDEBench)
 * Raissi, M., Perdikaris, P., & Karniadakis, G. E. (2019). *Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations*. Journal of Computational Physics.

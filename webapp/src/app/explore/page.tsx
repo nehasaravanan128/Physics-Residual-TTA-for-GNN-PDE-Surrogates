@@ -176,11 +176,35 @@ export default function ExplorePage() {
         {/* Load form */}
         <div className="card" style={{ marginBottom: 24, background: "var(--bg-card)" }}>
           <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
-            <div className="form-group" style={{ flex: "0 0 220px", marginBottom: 0 }}>
-              <label className="form-label">Dataset Archetype</label>
-              <select className="form-select" value={dataset} onChange={(e) => setDataset(e.target.value)}>
-                <option value="burgers">Burgers' Equation (1D)</option>
-                <option value="cylinder">CylinderFlow (2D)</option>
+            <div className="form-group" style={{ flex: "0 0 280px", marginBottom: 0 }}>
+              <label className="form-label">Dataset Archetype &amp; Shape</label>
+              <select
+                className="form-select"
+                value={dataset}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDataset(val);
+                  if (val === "burgers") setDataPath("./1D_Burgers_Sols_Nu0.001.hdf5");
+                  else setDataPath(`./datasets/${val}.hdf5`);
+                }}
+              >
+                <optgroup label="1D PDE Benchmarks">
+                  <option value="burgers">Viscous Burgers' 1D (PDEBench 8.2GB)</option>
+                  <option value="burgers_1d">Synthetic Burgers' 1D (0.3MB)</option>
+                </optgroup>
+                <optgroup label="2D Aerodynamic &amp; Obstacle Bodies">
+                  <option value="cylinder_flow_2d">2D Cylinder Flow (Karman Vortex)</option>
+                  <option value="airfoil_flow_2d">2D NACA 0012 Airfoil (Wake Separation)</option>
+                  <option value="square_flow_2d">2D Square Bluff Body (Corner Recirculation)</option>
+                  <option value="step_flow_2d">2D Backward-Facing Step (Expansion Flow)</option>
+                  <option value="multi_cylinder_flow_2d">2D Multi-Cylinder Array (Interfering Wake)</option>
+                </optgroup>
+                <optgroup label="2D Continuous Fluid &amp; Field PDEs">
+                  <option value="heat_2d">2D Heat / Thermal Diffusion</option>
+                  <option value="advection_2d">2D Advection / Rotating Flow</option>
+                  <option value="burgers_2d">2D Coupled Burgers (Vector Velocity)</option>
+                  <option value="navier_stokes_2d">2D Navier-Stokes (Vorticity Dynamics)</option>
+                </optgroup>
               </select>
             </div>
             <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -205,6 +229,40 @@ export default function ExplorePage() {
                 </>
               )}
             </button>
+          </div>
+
+          {/* Quick Preset Selector Pills */}
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>Quick Presets:</span>
+            {[
+              { id: "burgers", label: "Burgers 1D", path: "./1D_Burgers_Sols_Nu0.001.hdf5" },
+              { id: "cylinder_flow_2d", label: "Cylinder 2D", path: "./datasets/cylinder_flow_2d.hdf5" },
+              { id: "airfoil_flow_2d", label: "NACA Airfoil", path: "./datasets/airfoil_flow_2d.hdf5" },
+              { id: "square_flow_2d", label: "Square Body", path: "./datasets/square_flow_2d.hdf5" },
+              { id: "step_flow_2d", label: "Step Channel", path: "./datasets/step_flow_2d.hdf5" },
+              { id: "heat_2d", label: "Heat 2D", path: "./datasets/heat_2d.hdf5" },
+              { id: "navier_stokes_2d", label: "Navier-Stokes", path: "./datasets/navier_stokes_2d.hdf5" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setDataset(p.id);
+                  setDataPath(p.path);
+                }}
+                style={{
+                  fontSize: 10.5,
+                  padding: "3px 8px",
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  background: dataPath === p.path ? "rgba(196, 112, 79, 0.1)" : "var(--bg-card-subtle)",
+                  color: dataPath === p.path ? "var(--accent-terracotta)" : "var(--text-secondary)",
+                  fontWeight: dataPath === p.path ? 600 : 400,
+                  cursor: "pointer",
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
 
           {error && (
@@ -335,7 +393,7 @@ export default function ExplorePage() {
                           fontSize: 12,
                           boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                         }}
-                        formatter={(v: number) => [v.toFixed(5), "Velocity u(x)"]}
+                        formatter={(v: any) => [typeof v === "number" ? v.toFixed(5) : String(v), "Velocity u(x)"]}
                       />
                       <Line
                         type="monotone"
