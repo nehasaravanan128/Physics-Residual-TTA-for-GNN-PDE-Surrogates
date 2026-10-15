@@ -3,8 +3,9 @@ import { useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { Sliders, AlertCircle, Zap, Activity, CheckCircle2, TrendingDown } from "lucide-react";
+import { Sliders, AlertCircle, Zap, Activity, CheckCircle2, TrendingDown, Layers } from "lucide-react";
 import FlowVisualizer, { StepResult } from "../components/FlowVisualizer";
+import FlowVisualizer2D from "../components/FlowVisualizer2D";
 
 const API = "http://localhost:3001";
 
@@ -90,7 +91,7 @@ function generateSampleFlow(): InferResult {
 }
 
 export default function InferencePage() {
-  const [activeMode, setActiveMode] = useState<"tta" | "rollout">("tta");
+  const [activeMode, setActiveMode] = useState<"tta" | "rollout" | "flow2d">("flow2d");
   const [dataset, setDataset] = useState("burgers");
   const [dataPath, setDataPath] = useState("./1D_Burgers_Sols_Nu0.001.hdf5");
   const [checkpointPath, setCheckpointPath] = useState("../real_burgers_model.pt");
@@ -216,6 +217,22 @@ export default function InferencePage() {
             >
               <Activity size={13} style={{ marginRight: 5, color: "var(--accent-sage)" }} />
               Continuum Rollout
+            </button>
+            <button
+              id="mode-tab-flow2d"
+              onClick={() => setActiveMode("flow2d")}
+              className={`btn-subtle ${activeMode === "flow2d" ? "active" : ""}`}
+              style={{
+                padding: "6px 14px",
+                fontSize: 11.5,
+                fontWeight: activeMode === "flow2d" ? 600 : 400,
+                background: activeMode === "flow2d" ? "#FFFFFF" : "transparent",
+                boxShadow: activeMode === "flow2d" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                cursor: "pointer",
+              }}
+            >
+              <Layers size={13} style={{ marginRight: 5, color: "var(--accent-amber)" }} />
+              2D Obstacle Flow Visualizer
             </button>
           </div>
         </div>
@@ -400,6 +417,13 @@ export default function InferencePage() {
               </div>
             )}
           </div>
+
+          {/* MODE 0: 2D OBSTACLE FLOW VISUALIZER */}
+          {activeMode === "flow2d" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <FlowVisualizer2D />
+            </div>
+          )}
 
           {/* MODE 1: TEST-TIME ADAPTATION RESULTS */}
           {activeMode === "tta" && (

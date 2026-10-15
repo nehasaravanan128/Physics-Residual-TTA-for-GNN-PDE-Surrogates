@@ -1,0 +1,18 @@
+# Physics-Residual TTA for GNN PDE Surrogates
+# Python dependencies
+
+# Core ML framework
+torch>=2.0.0
+torch-geometric>=2.4.0
+
+# Scientific computing
+numpy>=1.24.0
+scipy>=1.10.0
+h5py>=3.8.0
+
+# Visualization & utilities (optional, for scripts)
+matplotlib>=3.7.0
+tqdm>=4.65.0
+
+# Express API server (install via: cd server && npm install)
+# - express, cors

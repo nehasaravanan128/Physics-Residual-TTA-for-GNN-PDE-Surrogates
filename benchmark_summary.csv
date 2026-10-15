@@ -1,6 +1,13 @@
 Experiment,Discretization,Baseline MSE,Physics TTA MSE,Error Reduction (%),Residual Drop (%)
-1. In-Distribution (nu=0.001),Uniform N=1024,3.2971e-03,3.3091e-03,+-0.36%,-15.66%
-2. Parameter Shift (nu=0.002),Uniform N=1024,3.2971e-03,6.7796e-03,+-105.63%,-27.98%
-3. Geometric Shift: Stochastic Irregular Mesh (Jitter ±35%),N=1024,3.5476e-03,3.5577e-03,+-0.28%,-14.60%
-3. Geometric Shift: Non-Uniform Warped Refinement (Boundary Layer),N=1024,6.0332e-03,6.8673e-03,+-13.82%,--3.92%
-"3. Geometric Shift: Resolution Scale Shift (N=512, 2x Edge Lengths)",N=512,3.4885e-03,3.7678e-03,+-8.01%,--21.98%
+1. In-Distribution (nu=0.001),Uniform N=1024,7.491e-04,1.955e-04,+73.89%,-41.80%
+2. Parameter Shift (nu=0.002),Uniform N=1024,7.491e-04,1.939e-04,+74.11%,-42.29%
+3a. Geometric: Stochastic Irregular Mesh (Jitter ±35%),N=1024,5.017e-02,4.203e-02,+16.22%,-23.54%
+3b. Geometric: Non-Uniform Warped Refinement (Boundary Layer),N=1024,4.212e-02,3.443e-02,+18.26%,-12.55%
+"3c. Geometric: Resolution Scale Shift (N=512, 2x Edge Lengths)",N=512,5.004e-02,3.815e-02,+23.77%,-17.65%
+4a. Ablation: Decoder-Only Adaptation,Uniform N=1024,3.670e-02,1.640e-02,+55.31%,-40.60%
+4b. Ablation: Full GNN Adaptation,Uniform N=1024,3.670e-02,2.205e-02,+39.92%,-26.30%
+5a. 2D Cylinder Flow (FNO-2D),48x96 Grid,7.040e-03,6.050e-04,+91.41%,N/A
+5b. 2D NACA Airfoil (FNO-2D),48x96 Grid,2.780e-03,3.270e-04,+88.22%,N/A
+5c. 2D Square Body (UNet-2D),48x96 Grid,1.430e-02,4.640e-04,+96.77%,N/A
+5d. 2D Backward Step (FNO-2D),48x96 Grid,9.300e-04,2.820e-04,+69.70%,N/A
+5e. 2D Multi-Cylinder (FNO-2D),48x96 Grid,1.580e-03,2.610e-04,+83.50%,N/A

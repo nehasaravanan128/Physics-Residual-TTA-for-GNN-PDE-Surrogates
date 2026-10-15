@@ -36,6 +36,7 @@ aiml project/
 │   ├── generate_synthetic_pde.py # Pseudo-spectral 1D/2D PDE dataset generator
 │   ├── download_pde_datasets.py # 10-dataset automated catalog & synthesizer
 │   ├── data_2d.py          # 2D Delaunay mesh graph dataset loader
+│   ├── get_2d_slice.py     # 2D velocity field extractor for web canvas rendering
 │   ├── evaluate_2d_benchmarks.py # Multi-shape & multi-model 2D benchmark runner
 │   ├── evaluate_geometric_shift.py # Geometric mesh distortion benchmark
 │   ├── evaluate_ablations.py # Systematic ablation suite (K, λ, η, scope)
@@ -51,19 +52,24 @@ aiml project/
 ├── webapp/                 # Next.js 16 interactive dashboard & flow visualizer
 │   ├── src/app/
 │   │   ├── page.tsx        # Overview dashboard with live fluid sandbox
-│   │   ├── inference/      # TTA execution & multi-step rollout viewer
+│   │   ├── inference/      # TTA execution, multi-step rollout & 2D flow viewer
 │   │   ├── explore/        # Space-time waterfall & 10-dataset catalog explorer
 │   │   ├── train/          # Training telemetry & live loss streaming
 │   │   ├── evaluate/       # Benchmark reporting (2D Shapes + Geometric + Ablations)
 │   │   └── components/
-│   │       ├── FlowVisualizer.tsx  # Canvas fluid wave & particle simulator
+│   │       ├── FlowVisualizer.tsx    # 1D Canvas fluid wave & particle simulator
+│   │       ├── FlowVisualizer2D.tsx  # 2D obstacle flow heatmap & streamline renderer
 │   │       └── Sidebar.tsx
 │   └── src/app/globals.css # Warm brown/beige editorial design system
+├── tests/
+│   └── test_physics_loss.py # Smoke tests for physics loss, model & TTA engine
 ├── real_burgers_model.pt   # Pretrained MeshGraphNet checkpoint
 ├── PROJECT_REPORT.md       # Full academic project report
 ├── PRESENTATION_SLIDES.md  # 12-slide conference/defense deck
-├── BENCHMARK_RESULTS_SUMMARY.md  # Auto-generated consolidated results
+├── BENCHMARK_RESULTS_SUMMARY.md  # Consolidated results across all experiments
 ├── benchmark_summary.csv   # Machine-readable benchmark matrix
+├── requirements.txt        # Python dependency specifications
+├── LICENSE                 # MIT License
 ├── run_experiments.bat     # Windows 1-click reproduction script
 └── README.md
 ```

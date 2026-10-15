@@ -22,6 +22,8 @@ app.use(express.json());
 const ROOT = path.resolve(__dirname, "..");
 const SCRIPTS_DIR = path.join(ROOT, "scripts");
 const FILES_DIR = path.join(ROOT, "files (5)");
+const DEFAULT_DATA_PATH = "files (5)/1D_Burgers_Sols_Nu0.001.hdf5";
+const DEFAULT_CKPT_PATH = "real_burgers_model.pt";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -402,6 +404,23 @@ app.post("/api/generate-dataset", async (req, res) => {
     const args = ["--key", key, "--force_synth"];
     await runPython("download_pde_datasets.py", args);
     res.json({ success: true, message: `Dataset '${key}' synthesized successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/flow-2d/slice ────────────────────────────────────────────────
+app.get("/api/flow-2d/slice", async (req, res) => {
+  const { shape = "cylinder", traj = 0, timestep = 0 } = req.query;
+  try {
+    const { stdout } = await runPython("get_2d_slice.py", [
+      "--shape", String(shape),
+      "--traj", String(traj),
+      "--timestep", String(timestep),
+    ]);
+    const jsonStart = stdout.indexOf("{");
+    const jsonStr = jsonStart >= 0 ? stdout.slice(jsonStart) : stdout;
+    res.json(JSON.parse(jsonStr));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
