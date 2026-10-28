@@ -6,8 +6,19 @@ Experiment,Discretization,Baseline MSE,Physics TTA MSE,Error Reduction (%),Resid
 "3c. Geometric: Resolution Scale Shift (N=512, 2x Edge Lengths)",N=512,5.004e-02,3.815e-02,+23.77%,-17.65%
 4a. Ablation: Decoder-Only Adaptation,Uniform N=1024,3.670e-02,1.640e-02,+55.31%,-40.60%
 4b. Ablation: Full GNN Adaptation,Uniform N=1024,3.670e-02,2.205e-02,+39.92%,-26.30%
-5a. 2D Cylinder Flow (FNO-2D),48x96 Grid,7.040e-03,6.050e-04,+91.41%,N/A
-5b. 2D NACA Airfoil (FNO-2D),48x96 Grid,2.780e-03,3.270e-04,+88.22%,N/A
-5c. 2D Square Body (UNet-2D),48x96 Grid,1.430e-02,4.640e-04,+96.77%,N/A
-5d. 2D Backward Step (FNO-2D),48x96 Grid,9.300e-04,2.820e-04,+69.70%,N/A
-5e. 2D Multi-Cylinder (FNO-2D),48x96 Grid,1.580e-03,2.610e-04,+83.50%,N/A
+5a. 2D Cylinder Flow (FNO-2D; trained; mean of 3 test trajectories),48x96 Grid,3.949e-07,3.946e-07,+0.06%,-15.30%
+5b. 2D Cylinder Flow (Physics UNet-2D; trained; mean of 3 test trajectories),48x96 Grid,1.705e-07,2.516e-07,-49.60%,-44.69%
+5c. 2D NACA 0012 Airfoil (FNO-2D; trained; mean of 3 test trajectories),48x96 Grid,4.345e-08,4.797e-08,-10.59%,-13.43%
+5d. 2D NACA 0012 Airfoil (Physics UNet-2D; trained; mean of 3 test trajectories),48x96 Grid,3.969e-08,1.815e-07,-346.56%,-54.99%
+5e. 2D Square Bluff Body (FNO-2D; trained; mean of 3 test trajectories),48x96 Grid,2.316e-08,2.911e-08,-25.80%,-10.99%
+5f. 2D Square Bluff Body (Physics UNet-2D; trained; mean of 3 test trajectories),48x96 Grid,2.301e-08,1.109e-07,-381.46%,-40.43%
+5g. 2D Backward-Facing Step (FNO-2D; trained; mean of 3 test trajectories),48x96 Grid,1.993e-08,2.759e-08,-38.55%,-2.94%
+5h. 2D Backward-Facing Step (Physics UNet-2D; trained; mean of 3 test trajectories),48x96 Grid,1.981e-08,3.670e-08,-85.74%,-15.25%
+5i. 2D Multi-Cylinder Array (FNO-2D; trained; mean of 3 test trajectories),48x96 Grid,1.563e-08,1.989e-08,-27.22%,-7.03%
+5j. 2D Multi-Cylinder Array (Physics UNet-2D; trained; mean of 3 test trajectories),48x96 Grid,1.816e-08,1.125e-07,-518.79%,-33.45%
+5k. 2D Heat Diffusion (FNO-2D; trained; mean of 3 test trajectories),64x64 Grid,8.548e-07,7.939e-07,+26.26%,-22.26%
+5l. 2D Heat Diffusion (Physics UNet-2D; trained; mean of 3 test trajectories),64x64 Grid,2.641e-07,1.423e-07,+45.51%,-43.64%
+5m. 2D Advection Flow (FNO-2D; trained; mean of 3 test trajectories),64x64 Grid,4.302e-05,4.191e-05,+6.58%,-6.70%
+5n. 2D Advection Flow (Physics UNet-2D; trained; mean of 3 test trajectories),64x64 Grid,4.264e-05,1.792e-05,+67.25%,-68.54%
+5o. 2D Navier-Stokes Vorticity (FNO-2D; trained; mean of 3 test trajectories),64x64 Grid,1.379e-05,1.364e-05,+5.69%,-5.69%
+5p. 2D Navier-Stokes Vorticity (Physics UNet-2D; trained; mean of 3 test trajectories),64x64 Grid,8.612e-06,5.886e-06,+57.53%,-57.51%

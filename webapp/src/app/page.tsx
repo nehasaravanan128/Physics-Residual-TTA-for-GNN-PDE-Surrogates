@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Waves, ArrowRight, Play, Pause, Sliders, Cpu, Activity, BarChart2, Database } from "lucide-react";
+import { Waves, ArrowRight, Play, Pause, Sliders, Cpu, Activity, BarChart2, Database, GraduationCap } from "lucide-react";
 
 const stats = [
   { label: "Surrogate Architecture", value: "MeshGraphNet", accent: "terracotta", sub: "Pfaff et al. inductive bias" },
@@ -34,6 +34,12 @@ const features = [
     title: "Benchmark & Verification",
     icon: BarChart2,
     description: "Evaluate held-out checkpoints for relative MSE, conservation of kinetic energy, and spatial L1/L2 error.",
+  },
+  {
+    href: "/viva",
+    title: "Viva Defense & Professor Q&A",
+    icon: GraduationCap,
+    description: "Complete academic defense cheat sheet with 16 categorized committee questions, derivations, and practice mode.",
   },
 ];
 
@@ -78,33 +84,44 @@ export default function HomePage() {
     particlesRef.current = pts;
   }, []);
 
-  // High-DPI canvas setup
-  const setupCanvas = useCallback((canvas: HTMLCanvasElement) => {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return null;
-    const tw = Math.round(rect.width * dpr);
-    const th = Math.round(rect.height * dpr);
-    if (canvas.width !== tw || canvas.height !== th) {
-      canvas.width = tw;
-      canvas.height = th;
-    }
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.resetTransform?.();
-    ctx.scale(dpr, dpr);
-    return { ctx, width: rect.width, height: rect.height };
-  }, []);   // Main 60fps animation loop — all rendering in RAF, no React state in hot path
+  const canvasSizeRef = useRef<{ width: number; height: number; dpr: number } | null>(null);
+
+  useEffect(() => {
+    const canvas = sandboxCanvasRef.current;
+    if (!canvas) return;
+    const measure = () => {
+      const dpr = typeof window !== "undefined" ? Math.min(2, window.devicePixelRatio || 1) : 1;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const tw = Math.round(rect.width * dpr);
+      const th = Math.round(rect.height * dpr);
+      if (canvas.width !== tw || canvas.height !== th) {
+        canvas.width = tw;
+        canvas.height = th;
+      }
+      canvasSizeRef.current = { width: rect.width, height: rect.height, dpr };
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(canvas);
+    window.addEventListener("resize", measure, { passive: true });
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  // Main 60-120fps animation loop — all rendering in RAF, no React state in hot path
   useEffect(() => {
     const loop = (timestamp: number) => {
-      const delta = Math.min(0.05, (timestamp - (lastTsRef.current || timestamp)) / 1000);
+      const delta = Math.min(0.033, (timestamp - (lastTsRef.current || timestamp)) / 1000);
       lastTsRef.current = timestamp;
 
       // Smooth time advance — fast enough to see the wave propagate visibly
       if (isPlayingRef.current) {
         waveTimeRef.current += 1.6 * delta;
         if (waveTimeRef.current >= 4.0) waveTimeRef.current -= 4.0; // seamless wrap
-        if (Math.floor(timestamp / 100) !== Math.floor((timestamp - delta * 1000) / 100)) {
+        if (Math.floor(timestamp / 150) !== Math.floor((timestamp - delta * 1000) / 150)) {
           setDisplayTime(waveTimeRef.current % 1.2);
         }
       }
@@ -112,9 +129,12 @@ export default function HomePage() {
       const canvas = sandboxCanvasRef.current;
       if (!canvas) { animIdRef.current = requestAnimationFrame(loop); return; }
 
-      const res = setupCanvas(canvas);
-      if (!res) { animIdRef.current = requestAnimationFrame(loop); return; }
-      const { ctx, width, height } = res;
+      const size = canvasSizeRef.current;
+      if (!size) { animIdRef.current = requestAnimationFrame(loop); return; }
+      const { width, height, dpr } = size;
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) { animIdRef.current = requestAnimationFrame(loop); return; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       const margin = { top: 18, right: 24, bottom: 28, left: 42 };
       const plotW = width - margin.left - margin.right;
@@ -221,13 +241,9 @@ export default function HomePage() {
       ctx.closePath();
       ctx.fill();
 
-      // Glow under main curve
-      ctx.save();
-      ctx.shadowColor = "rgba(184, 93, 54, 0.35)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetY = 2;
-      ctx.strokeStyle = "#B85D36";
-      ctx.lineWidth = 2.8;
+      // Bloom glow under main curve (0ms hardware accelerated)
+      ctx.strokeStyle = "rgba(184, 93, 54, 0.22)";
+      ctx.lineWidth = 6.5;
       ctx.beginPath();
       for (let i = 0; i < nPoints; i++) {
         const px = getXPix(i / (nPoints - 1));
@@ -236,7 +252,17 @@ export default function HomePage() {
         else ctx.lineTo(px, py);
       }
       ctx.stroke();
-      ctx.restore();
+
+      ctx.strokeStyle = "rgba(184, 93, 54, 0.45)";
+      ctx.lineWidth = 3.6;
+      ctx.beginPath();
+      for (let i = 0; i < nPoints; i++) {
+        const px = getXPix(i / (nPoints - 1));
+        const py = getYPix(pts[i]);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
 
       // Crisp main curve on top (no shadow)
       ctx.strokeStyle = "#B85D36";
@@ -287,7 +313,7 @@ export default function HomePage() {
 
     animIdRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animIdRef.current);
-  }, [setupCanvas]);
+  }, []);
 
   // Allow manual slider to override waveTime ref
   const handleTimeSlider = (val: number) => {

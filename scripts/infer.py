@@ -26,13 +26,7 @@ from data import load_burgers
 
 
 def load_checkpoint(checkpoint_path, device):
-    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    model = MeshGraphNet(
-        node_in_dim=ckpt["node_in_dim"],
-        edge_in_dim=ckpt["edge_in_dim"],
-        out_dim=ckpt["out_dim"],
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
+    model = MeshGraphNet.from_checkpoint(checkpoint_path, device=device)
     model.eval()
     return model
 
@@ -51,22 +45,25 @@ def main():
     model = load_checkpoint(args.checkpoint_path, device)
 
     if args.dataset == "burgers":
-        # Load a small subset: only the requested trajectory
-        dataset = load_burgers(args.data_path, num_samples=args.traj + 1)
-
-        # Collect up to num_steps timestep graphs starting at args.timestep
         import h5py
         with h5py.File(args.data_path, "r") as f:
-            tensor = f["tensor"][args.traj]  # [T, X]
-            x_coord = f["x-coordinate"][:]   # [X]
+            ds = f["tensor"]
+            N = ds.shape[0]
+            traj_idx = min(max(0, args.traj), N - 1)
+            tensor = ds[traj_idx]  # [T, X]
+            x_coord = f["x-coordinate"][:] if "x-coordinate" in f else np.linspace(0, 1, tensor.shape[1])
 
         T, X = tensor.shape
-        results = {"x_coord": x_coord.tolist(), "steps": [], "dataset": "burgers"}
+        results = {"x_coord": x_coord.tolist(), "steps": [], "dataset": "burgers", "trajectory": traj_idx}
 
-        # Grab the edge_index / edge_attr from one sample
-        sample = dataset[0]
-        edge_index = sample.edge_index.to(device)
-        edge_attr = sample.edge_attr.to(device)
+        # Construct 1D chain graph directly (instant, zero memory overhead)
+        src = np.arange(X - 1)
+        dst = src + 1
+        edge_index_np = np.concatenate([np.stack([src, dst]), np.stack([dst, src])], axis=1)
+        edge_index = torch.tensor(edge_index_np, dtype=torch.long, device=device)
+        dx = x_coord[dst] - x_coord[src]
+        edge_attr_np = np.concatenate([dx, -dx])[:, None]
+        edge_attr = torch.tensor(edge_attr_np, dtype=torch.float32, device=device)
 
         start = min(args.timestep, T - 2)
         end = min(start + args.num_steps, T - 1)

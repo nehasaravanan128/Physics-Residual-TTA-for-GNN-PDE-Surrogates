@@ -113,7 +113,19 @@ At test time on an unlabelled sample $(x_t, \text{mesh})$:
 
 ## 📈 Empirical Benchmarking Results
 
-Evaluated across held-out PDEBench trajectories using `scripts/evaluate_tta.py`:
+### Headline: Gated TTA on 20 Held-Out Trajectories
+TTA now runs only when the physics residual can still detect an error: q = R(prediction) / R(copy input) must exceed κ times the residual of the true solution on that mesh, both measured on separate calibration trajectories (no test labels). Results on trajectories 9980–9999, mean ± std across trajectories (`scripts/evaluate_gated_tta.py`, Crank–Nicolson residual):
+
+| Mesh | Original model: plain TTA | Original model: gated TTA | v2 model: plain TTA | v2 model: gated TTA |
+|---|:---:|:---:|:---:|:---:|
+| Uniform | +15.9% ± 19.4% | **+18.9% ± 15.4%** | −190.6% ± 342.8% | **−8.2% ± 26.5%** |
+| Jitter ±35% | +14.4% ± 25.4% | **+18.1% ± 13.5%** | −61.9% ± 73.5% | **0.0%** (gate shut) |
+| Warped | +14.0% ± 26.9% | **+18.0% ± 16.1%** | +13.7% ± 14.0% | **+13.1% ± 14.2%** |
+| Coarse N=512 | +22.7% ± 16.1% | **+22.7% ± 16.1%** | +36.9% ± 14.5% | **+36.9% ± 14.5%** |
+
+Every gated gain on the original model is significant (paired Wilcoxon, p ≤ 1.3×10⁻⁵). With the gate, TTA makes ≤5% of samples worse on any 1D mesh and no test frame worse on any of the eight 2D datasets (3 held-out trajectories each, `scripts/evaluate_gated_tta_2d.py`). Full tables: [BENCHMARK_RESULTS_SUMMARY.md](BENCHMARK_RESULTS_SUMMARY.md). The experiments below use the earlier protocol (few trajectories, some seen in training).
+
+Earlier results, from `scripts/evaluate_tta.py`:
 
 ### Experiment 1: In-Distribution Evaluation ($\nu = 0.001$)
 | Test Trajectory | Timestep | Baseline MSE (Pre-TTA) | Adapted MSE (Post-TTA) | Accuracy Gain |
@@ -242,15 +254,20 @@ Open [http://localhost:3000](http://localhost:3000) in your browser:
 
 The framework extends beyond 1D to 2D continuous fields and fluid flow past complex aerodynamic bodies:
 
-| Benchmark Shape / Domain | Physical Regime | Grid Size | Pre-TTA MSE | Post-TTA MSE | TTA Error Reduction (%) |
+| Dataset | Physics residual used by TTA | Grid | Copy-previous | FNO-2D trained → after TTA | UNet-2D trained → after TTA |
 |---|---|:---:|:---:|:---:|:---:|
-| **Circular Cylinder** | Karman Vortex Street ($Re \sim 85$) | $48 \times 96$ | $7.04 \times 10^{-3}$ | $6.05 \times 10^{-4}$ | **+91.41%** (FNO-2D) |
-| **NACA 0012 Airfoil** | Boundary-layer wake separation | $48 \times 96$ | $2.78 \times 10^{-3}$ | $3.27 \times 10^{-4}$ | **+88.22%** (FNO-2D) |
-| **Square Bluff Body** | Sharp-corner recirculation | $48 \times 96$ | $1.43 \times 10^{-2}$ | $4.64 \times 10^{-4}$ | **+96.77%** (UNet-2D) |
-| **Backward-Facing Step** | Sudden expansion channel flow | $48 \times 96$ | $9.30 \times 10^{-4}$ | $2.82 \times 10^{-4}$ | **+69.70%** (FNO-2D) |
-| **Multi-Cylinder Array** | Tandem wake interference | $48 \times 96$ | $1.58 \times 10^{-3}$ | $2.61 \times 10^{-4}$ | **+83.50%** (FNO-2D) |
-| **2D Advection Flow** | Rotating scalar transport | $64 \times 64$ | $1.24 \times 10^{-2}$ | $6.35 \times 10^{-3}$ | **+48.79%** (FNO-2D) |
-| **2D Heat Diffusion** | Continuous thermal dissipation | $64 \times 64$ | $2.20 \times 10^{-2}$ | $2.06 \times 10^{-2}$ | **+6.33%** (FNO-2D) |
+| **Cylinder Flow** | Navier-Stokes momentum + mass conservation + no-slip | 48×96 | 0.76% | 0.32% → 0.32% (+0.1% ± 0.1%) | 0.21% → 0.26% (-49.6% ± 10.8%) |
+| **NACA 0012 Airfoil** | Navier-Stokes momentum + mass conservation + no-slip | 48×96 | 0.72% | 0.11% → 0.11% (-10.6% ± 1.0%) | 0.10% → 0.22% (-346.6% ± 50.3%) |
+| **Square Bluff Body** | Navier-Stokes momentum + mass conservation + no-slip | 48×96 | 0.78% | 0.08% → 0.09% (-25.8% ± 7.0%) | 0.08% → 0.17% (-381.5% ± 1.6%) |
+| **Backward-Facing Step** | Navier-Stokes momentum + mass conservation + no-slip | 48×96 | 0.79% | 0.07% → 0.09% (-38.5% ± 3.2%) | 0.07% → 0.10% (-85.7% ± 3.5%) |
+| **Multi-Cylinder Array** | Navier-Stokes momentum + mass conservation + no-slip | 48×96 | 0.79% | 0.06% → 0.07% (-27.2% ± 0.3%) | 0.07% → 0.17% (-518.8% ± 7.2%) |
+| **2D Heat Diffusion** | heat equation | 64×64 | 1.84% | 0.40% → 0.37% (+26.3% ± 16.8%) | 0.25% → 0.18% (+45.5% ± 5.4%) |
+| **2D Advection Flow** | advection equation | 64×64 | 3.48% | 3.56% → 3.49% (+6.6% ± 7.6%) | 3.37% → 1.98% (+67.2% ± 9.6%) |
+| **2D Navier-Stokes Vorticity** | Navier-Stokes vorticity equation | 64×64 | 0.50% | 0.55% → 0.54% (+5.7% ± 5.9%) | 0.42% → 0.29% (+57.5% ± 24.7%) |
+
+*Relative L2 error, mean over 3 held-out test trajectories per dataset (trajectories 2, 5 and 8 of 10; lower is better); brackets = change in MSE from TTA, mean ± std across those trajectories. Models are trained on 6 other trajectories (`models/benchmark_2d/`), reloaded, then adapted for 10 steps (lr 2e-4, anchor 0.1, output head only); trajectory 9 is kept back for gate calibration. Source: `scripts/evaluate_2d_benchmarks.py` → `scripts/benchmark_2d_results.json`.*
+
+**Finding:** TTA helps when the residual is a sharp check of the data — heat, advection and vorticity (UNet-2D: +46%, +67%, +58%; FNO-2D: +26%, +7%, +6%). On the LBM obstacle flows the trained models are already 2–13× better than copy-previous, the residual separates truth from copying only a few times over, and TTA lowers the residual (3–55%) while *increasing* the error. TTA is only as good as its physics residual, which is why the gated version (above) shuts it off there.
 
 ### Supported Surrogate Architectures
 * **Fourier Neural Operator (FNO-2D)**: Truncated 2D spectral convolution via Fast Fourier Transforms ($1,188,353$ parameters).

@@ -1,16 +1,19 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, Cpu, BarChart2, Database, Waves } from "lucide-react";
+import { Home, Activity, Layers, Cpu, BarChart2, Database, Waves, GraduationCap } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { label: "SURROGATE MODEL", section: true },
-  { href: "/inference", label: "Flow Inference", icon: Activity },
+  { href: "/inference", label: "1D Flow & TTA", icon: Activity },
+  { href: "/flow2d", label: "2D Obstacle Flow", icon: Layers },
   { href: "/train", label: "Model Training", icon: Cpu },
   { href: "/evaluate", label: "Verification & Eval", icon: BarChart2 },
   { label: "CONTINUUM DATA", section: true },
   { href: "/explore", label: "Dataset Explorer", icon: Database },
+  { label: "ACADEMIC DEFENSE", section: true },
+  { href: "/viva", label: "Viva Defense Q&A", icon: GraduationCap },
 ];
 
 export default function Sidebar() {

@@ -55,31 +55,39 @@ export default function TrainPage() {
 
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
 
       while (true) {
         const { done: streamDone, value } = await reader.read();
         if (streamDone) break;
 
-        const text = decoder.decode(value);
-        const lines = text.split("\n").filter((l) => l.startsWith("data: "));
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
 
-        for (const line of lines) {
-          try {
-            const payload = JSON.parse(line.replace("data: ", ""));
-            if (payload.log) {
-              setLogs((prev) => [...prev, payload.log]);
-              const parsed = parseLogLine(payload.log);
-              if (parsed) setEpochData((prev) => [...prev, parsed]);
+        for (const part of parts) {
+          const lines = part.split("\n").filter((l) => l.startsWith("data: "));
+          for (const line of lines) {
+            try {
+              const payload = JSON.parse(line.replace("data: ", ""));
+              if (payload.log) {
+                setLogs((prev) => [...prev, payload.log]);
+                const parsed = parseLogLine(payload.log);
+                if (parsed) setEpochData((prev) => [...prev, parsed]);
+              }
+              if (payload.error) {
+                setLogs((prev) => [...prev, `[stderr] ${payload.error}`]);
+              }
+              if (payload.done) {
+                setDone(true);
+                setRunning(false);
+                if (payload.code && payload.code !== 0) {
+                  setError(`Training process exited with error code ${payload.code}`);
+                }
+              }
+            } catch {
+              // Ignore malformed SSE chunks
             }
-            if (payload.error) {
-              setLogs((prev) => [...prev, `[stderr] ${payload.error}`]);
-            }
-            if (payload.done) {
-              setDone(true);
-              setRunning(false);
-            }
-          } catch {
-            // Ignore malformed SSE chunks
           }
         }
       }

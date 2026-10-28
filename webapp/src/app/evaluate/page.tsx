@@ -498,14 +498,14 @@ Resolution Shift ($N=512$) & $5.004 \\times 10^{-2}$ & $3.815 \\times 10^{-2}$ &
                 <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Cylinder, Airfoil, Square, Step, Array</div>
               </div>
               <div className="card" style={{ padding: "14px 18px", borderLeft: "3px solid var(--accent-sage)" }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Peak TTA Gain</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent-sage)", marginTop: 4 }}>+96.77%</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Square Bluff Body (MSE 1.43e-2 &rarr; 4.64e-4)</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Best 2D TTA Gain</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent-sage)", marginTop: 4 }}>+67.2%</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Advection, UNet-2D (rel. L2 3.37% &rarr; 1.98%, 3 test trajectories)</div>
               </div>
               <div className="card" style={{ padding: "14px 18px", borderLeft: "3px solid var(--accent-amber)" }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>FNO-2D Cylinder Gain</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent-terracotta)", marginTop: 4 }}>+91.41%</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Karman vortex street (Re ~ 85)</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Obstacle Flows</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent-terracotta)", marginTop: 4 }}>TTA hurts</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Residual falls, error rises; the gate keeps TTA off</div>
               </div>
               <div className="card" style={{ padding: "14px 18px", borderLeft: "3px solid #6366F1" }}>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Model Surrogates</div>

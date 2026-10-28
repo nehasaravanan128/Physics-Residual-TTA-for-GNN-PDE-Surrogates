@@ -112,13 +112,7 @@ def run_geometric_benchmark(
 
     device = torch.device("cpu")
 
-    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    model = MeshGraphNet(
-        node_in_dim=ckpt["node_in_dim"],
-        edge_in_dim=ckpt["edge_in_dim"],
-        out_dim=ckpt["out_dim"],
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
+    model = MeshGraphNet.from_checkpoint(checkpoint_path, device=device)
     model.eval()
 
     import h5py

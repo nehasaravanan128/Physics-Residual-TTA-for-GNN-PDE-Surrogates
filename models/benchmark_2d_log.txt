@@ -1,0 +1,20 @@
+Relative L2 error, mean over held-out test trajectories
+dataset                     model             copy-prev   trained after TTA   err red. (mean+-std)  res drop
+Cylinder Flow               FNO-2D                0.76%     0.32%     0.32%        +0.1% +-   0.1%    +15.3%
+Cylinder Flow               Physics UNet-2D       0.76%     0.21%     0.26%       -49.6% +-  10.8%    +44.7%
+NACA 0012 Airfoil           FNO-2D                0.72%     0.11%     0.11%       -10.6% +-   1.0%    +13.4%
+NACA 0012 Airfoil           Physics UNet-2D       0.72%     0.10%     0.22%      -346.6% +-  50.3%    +55.0%
+Square Bluff Body           FNO-2D                0.78%     0.08%     0.09%       -25.8% +-   7.0%    +11.0%
+Square Bluff Body           Physics UNet-2D       0.78%     0.08%     0.17%      -381.5% +-   1.6%    +40.4%
+Backward-Facing Step        FNO-2D                0.79%     0.07%     0.09%       -38.5% +-   3.2%     +2.9%
+Backward-Facing Step        Physics UNet-2D       0.79%     0.07%     0.10%       -85.7% +-   3.5%    +15.3%
+Multi-Cylinder Array        FNO-2D                0.79%     0.06%     0.07%       -27.2% +-   0.3%     +7.0%
+Multi-Cylinder Array        Physics UNet-2D       0.79%     0.07%     0.17%      -518.8% +-   7.2%    +33.4%
+2D Heat Diffusion           FNO-2D                1.84%     0.40%     0.37%       +26.3% +-  16.8%    +22.3%
+2D Heat Diffusion           Physics UNet-2D       1.84%     0.25%     0.18%       +45.5% +-   5.4%    +43.6%
+2D Advection Flow           FNO-2D                3.48%     3.56%     3.49%        +6.6% +-   7.6%     +6.7%
+2D Advection Flow           Physics UNet-2D       3.48%     3.37%     1.98%       +67.2% +-   9.6%    +68.5%
+2D Navier-Stokes Vorticity  FNO-2D                0.50%     0.55%     0.54%        +5.7% +-   5.9%     +5.7%
+2D Navier-Stokes Vorticity  Physics UNet-2D       0.50%     0.42%     0.29%       +57.5% +-  24.7%    +57.5%
+
+Results saved to C:\Users\nehas\OneDrive\Desktop\aiml project\scripts\benchmark_2d_results.json

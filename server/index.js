@@ -27,6 +27,40 @@ const DEFAULT_CKPT_PATH = "real_burgers_model.pt";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+function resolveDataPath(p) {
+  if (!p) return p;
+  if (path.isAbsolute(p)) return p;
+  const clean = p.replace(/^(\.\/|\.\\)/, "");
+  const candidates = [
+    path.join(ROOT, clean),
+    path.join(FILES_DIR, clean),
+    path.join(ROOT, "datasets", clean),
+    path.join(ROOT, "datasets", path.basename(clean)),
+    path.join(FILES_DIR, path.basename(clean)),
+    path.join(ROOT, "files (5)", clean),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.resolve(ROOT, clean);
+}
+
+function resolveCheckpointPath(p) {
+  if (!p) return p;
+  if (path.isAbsolute(p)) return p;
+  const clean = p.replace(/^(\.\/|\.\\|\.\.\/|\.\.\\)/, "");
+  const candidates = [
+    path.join(ROOT, clean),
+    path.join(FILES_DIR, clean),
+    path.join(ROOT, path.basename(clean)),
+    path.join(FILES_DIR, path.basename(clean)),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.resolve(ROOT, clean);
+}
+
 function getPythonExe() {
   const candidates = [
     process.env.PYTHON_PATH,
@@ -88,11 +122,14 @@ app.post("/api/infer", async (req, res) => {
     return res.status(400).json({ error: "dataPath and checkpointPath are required." });
   }
 
+  const resolvedData = resolveDataPath(dataPath);
+  const resolvedCkpt = resolveCheckpointPath(checkpointPath);
+
   try {
     const { stdout } = await runPython("infer.py", [
       "--dataset", dataset,
-      "--data_path", dataPath,
-      "--checkpoint_path", checkpointPath,
+      "--data_path", resolvedData,
+      "--checkpoint_path", resolvedCkpt,
       "--traj", String(trajectoryIdx),
       "--timestep", String(timestepIdx),
       "--num_steps", String(numSteps),
@@ -106,6 +143,8 @@ app.post("/api/infer", async (req, res) => {
   }
 });
 
+const ttaResultsCache = new Map();
+
 // ─── POST /api/tta (Physics-Residual Test-Time Adaptation) ───────────────────
 app.post("/api/tta", async (req, res) => {
   const {
@@ -115,7 +154,7 @@ app.post("/api/tta", async (req, res) => {
     trajectoryIdx = 0,
     trajIdx,
     timestepIdx = 10,
-    ttaSteps = 10,
+    ttaSteps = 8,
     ttaLr = 0.00008,
     nu = 0.001,
   } = req.body;
@@ -125,11 +164,18 @@ app.post("/api/tta", async (req, res) => {
   }
 
   const effectiveTraj = trajIdx !== undefined ? trajIdx : trajectoryIdx;
+  const resolvedData = resolveDataPath(dataPath);
+  const resolvedCkpt = resolveCheckpointPath(checkpointPath);
+
+  const cacheKey = `${effectiveTraj}_${timestepIdx}_${ttaSteps}_${ttaLr}_${nu}_${resolvedData}_${resolvedCkpt}`;
+  if (ttaResultsCache.has(cacheKey)) {
+    return res.json(ttaResultsCache.get(cacheKey));
+  }
 
   try {
     const { stdout } = await runPython("tta.py", [
-      "--data_path", dataPath,
-      "--checkpoint_path", checkpointPath,
+      "--data_path", resolvedData,
+      "--checkpoint_path", resolvedCkpt,
       "--traj", String(effectiveTraj),
       "--timestep", String(timestepIdx),
       "--tta_steps", String(ttaSteps),
@@ -140,7 +186,9 @@ app.post("/api/tta", async (req, res) => {
 
     const jsonStart = stdout.indexOf("{");
     const jsonStr = jsonStart >= 0 ? stdout.slice(jsonStart) : stdout;
-    res.json(JSON.parse(jsonStr));
+    const parsed = JSON.parse(jsonStr);
+    ttaResultsCache.set(cacheKey, parsed);
+    res.json(parsed);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -163,6 +211,8 @@ app.post("/api/train", (req, res) => {
     return res.status(400).json({ error: "dataPath is required." });
   }
 
+  const resolvedDataPath = resolveDataPath(dataPath);
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -170,14 +220,14 @@ app.post("/api/train", (req, res) => {
 
   const args = [
     "--dataset", dataset,
-    "--data_path", dataPath,
+    "--data_path", resolvedDataPath,
     "--epochs", String(epochs),
     "--batch_size", String(batchSize),
     "--lr", String(lr),
     "--checkpoint_path", checkpointPath,
     "--seed", String(seed),
   ];
-  if (metaPath) args.push("--meta_path", metaPath);
+  if (metaPath) args.push("--meta_path", resolveDataPath(metaPath));
 
   const pythonExe = getPythonExe();
   const trainScript = path.join(FILES_DIR, "train.py");
@@ -187,40 +237,60 @@ app.post("/api/train", (req, res) => {
     env: { ...process.env, PYTHONUNBUFFERED: "1" },
   });
 
+  let finished = false;
+
   proc.stdout.on("data", (d) => {
-    const lines = d.toString().split("\n").filter(Boolean);
+    const lines = d.toString().split("\n").map((l) => l.trim()).filter(Boolean);
     for (const line of lines) {
       res.write(`data: ${JSON.stringify({ log: line })}\n\n`);
     }
   });
 
   proc.stderr.on("data", (d) => {
-    res.write(`data: ${JSON.stringify({ error: d.toString() })}\n\n`);
+    const errText = d.toString().trim();
+    if (errText) {
+      res.write(`data: ${JSON.stringify({ error: errText })}\n\n`);
+    }
+  });
+
+  proc.on("error", (err) => {
+    finished = true;
+    res.write(`data: ${JSON.stringify({ error: err.message, done: true, code: 1 })}\n\n`);
+    res.end();
   });
 
   proc.on("close", (code) => {
+    finished = true;
     res.write(`data: ${JSON.stringify({ done: true, code })}\n\n`);
     res.end();
   });
 
-  req.on("close", () => proc.kill());
+  res.on("close", () => {
+    if (!finished && !proc.killed) {
+      try { proc.kill(); } catch (_) {}
+    }
+  });
 });
 
 // ─── POST /api/evaluate ──────────────────────────────────────────────────────
 app.post("/api/evaluate", async (req, res) => {
-  const { dataset = "burgers", dataPath, checkpointPath, metaPath } = req.body;
+  const { dataset = "burgers", dataPath, checkpointPath, metaPath, numSamples = 25 } = req.body;
 
   if (!dataPath || !checkpointPath) {
     return res.status(400).json({ error: "dataPath and checkpointPath are required." });
   }
 
+  const resolvedData = resolveDataPath(dataPath);
+  const resolvedCkpt = resolveCheckpointPath(checkpointPath);
+
   const args = [
     "--dataset", dataset,
-    "--data_path", dataPath,
-    "--checkpoint_path", checkpointPath,
+    "--data_path", resolvedData,
+    "--checkpoint_path", resolvedCkpt,
+    "--num_samples", String(numSamples),
     "--output_json",
   ];
-  if (metaPath) args.push("--meta_path", metaPath);
+  if (metaPath) args.push("--meta_path", resolveDataPath(metaPath));
 
   try {
     const { stdout } = await runPython("evaluate_api.py", args);
@@ -240,10 +310,12 @@ app.get("/api/dataset/info", async (req, res) => {
     return res.status(400).json({ error: "dataPath query param is required." });
   }
 
+  const resolvedData = resolveDataPath(dataPath);
+
   try {
     const { stdout } = await runPython("dataset_info.py", [
       "--dataset", dataset,
-      "--data_path", dataPath,
+      "--data_path", resolvedData,
     ]);
     const jsonStart = stdout.indexOf("{");
     res.json(JSON.parse(stdout.slice(jsonStart)));
@@ -265,9 +337,12 @@ app.post("/api/evaluate-geometric", async (req, res) => {
 
   try {
     const jsonPath = path.join(SCRIPTS_DIR, "geometric_benchmark_results.json");
+    const resolvedData = resolveDataPath(dataPath);
+    const resolvedCkpt = resolveCheckpointPath(checkpointPath);
+
     const args = [
-      "--data_path", dataPath,
-      "--checkpoint_path", checkpointPath,
+      "--data_path", resolvedData,
+      "--checkpoint_path", resolvedCkpt,
       "--num_samples", String(numSamples),
       "--tta_steps", String(ttaSteps),
       "--tta_lr", String(ttaLr),
@@ -324,9 +399,12 @@ app.post("/api/evaluate-ablations", async (req, res) => {
     } = req.body;
 
     const jsonPath = path.join(SCRIPTS_DIR, "ablation_benchmark_results.json");
+    const resolvedData = resolveDataPath(dataPath);
+    const resolvedCkpt = resolveCheckpointPath(checkpointPath);
+
     const args = [
-      "--data_path", dataPath,
-      "--checkpoint_path", checkpointPath,
+      "--data_path", resolvedData,
+      "--checkpoint_path", resolvedCkpt,
       "--num_samples", String(numSamples),
       "--output_json", jsonPath,
     ];
@@ -411,7 +489,7 @@ app.post("/api/generate-dataset", async (req, res) => {
 
 // ─── GET /api/flow-2d/slice ────────────────────────────────────────────────
 app.get("/api/flow-2d/slice", async (req, res) => {
-  const { shape = "cylinder", traj = 0, timestep = 0 } = req.query;
+  const { shape = "cylinder", traj = -1, timestep = 0 } = req.query;
   try {
     const { stdout } = await runPython("get_2d_slice.py", [
       "--shape", String(shape),
@@ -426,8 +504,65 @@ app.get("/api/flow-2d/slice", async (req, res) => {
   }
 });
 
+const simCustomCache = new Map();
+
+// ─── POST /api/flow-2d/simulate-custom ──────────────────────────────────────
+app.post("/api/flow-2d/simulate-custom", async (req, res) => {
+  const {
+    shape = "cylinder",
+    x = 0.25,
+    y = 0.50,
+    size = 1.0,
+    angle = 0.0,
+    reynolds = 120.0,
+    tta_steps = 8,
+    timesteps = 12,
+  } = req.body || {};
+
+  const cacheKey = `${shape}_${Number(x).toFixed(2)}_${Number(y).toFixed(2)}_${Number(size).toFixed(2)}_${Number(angle).toFixed(1)}_${Number(reynolds).toFixed(0)}_${tta_steps}_${timesteps}`;
+  if (simCustomCache.has(cacheKey)) {
+    return res.json(simCustomCache.get(cacheKey));
+  }
+
+  try {
+    const { stdout } = await runPython("simulate_custom_obstacle.py", [
+      "--shape", String(shape),
+      "--x", String(x),
+      "--y", String(y),
+      "--size", String(size),
+      "--angle", String(angle),
+      "--reynolds", String(reynolds),
+      "--tta_steps", String(tta_steps),
+      "--timesteps", String(timesteps),
+    ]);
+    const jsonStart = stdout.indexOf("{");
+    const jsonStr = jsonStart >= 0 ? stdout.slice(jsonStart) : stdout;
+    const parsed = JSON.parse(jsonStr);
+    simCustomCache.set(cacheKey, parsed);
+    res.json(parsed);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/flow-2d/training-status ────────────────────────────────────────
+app.get("/api/flow-2d/training-status", async (_, res) => {
+  const logPath = path.join(__dirname, "..", "models", "gnn_2d_training_log.json");
+  const modelPath = path.join(__dirname, "..", "models", "gnn_2d_obstacle_surrogate.pt");
+  const modelExists = fs.existsSync(modelPath);
+
+  if (fs.existsSync(logPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(logPath, "utf-8"));
+      return res.json({ modelExists, ...data });
+    } catch (_) {}
+  }
+  res.json({ modelExists, status: modelExists ? "trained" : "not_trained" });
+});
+
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`🚀 API server running on http://localhost:${PORT}`));
+

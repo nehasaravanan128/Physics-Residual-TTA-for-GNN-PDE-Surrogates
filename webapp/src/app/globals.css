@@ -29,6 +29,7 @@
   --accent-terracotta-hover: #9E411B;
   --accent-sage:       #2E6343; /* Deep scientific sage (Ground Truth) */
   --accent-ochre:      #B3741E; /* Amber ochre (Parameters / Physics) */
+  --accent-amber:      #B3741E; /* Alias for amber (used in UI) */
   --accent-charcoal:   #36302B; /* Deep charcoal (Surrogate baseline) */
   --accent-brick:      #B53526; /* Error residual */
 
@@ -37,6 +38,18 @@
   --data-pred:         var(--accent-terracotta);
   --data-error:        var(--accent-brick);
   --data-baseline:     var(--accent-charcoal);
+
+  /* Sand Scale (used throughout UI for backgrounds and borders) */
+  --sand-50:   #FDFCF9;
+  --sand-100:  #F8F5F0;
+  --sand-200:  #EDE8E0;
+  --sand-300:  #E0D9CF;
+  --sand-400:  #C8BFB3;
+  --sand-500:  #9C8E80;
+  --sand-600:  #7A6E62;
+  --sand-700:  #5C5247;
+  --sand-800:  #36302B;
+  --sand-900:  #1C1917;
 
   --btn-primary-bg:    #1C1917;
   --btn-primary-hover: #2E2925;
@@ -100,6 +113,7 @@ body {
   top: 0;
   left: 0;
   z-index: 100;
+  transition: transform 0.25s ease;
 }
 
 .sidebar-logo {
@@ -156,7 +170,7 @@ body {
   width: 100%;
   text-align: left;
   border-left: 2px solid transparent;
-  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 .nav-item:hover {
@@ -180,10 +194,13 @@ body {
 }
 
 .page-header {
-  padding: 26px 36px 18px;
+  padding: 24px 36px 18px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(8px);
+  background: var(--bg-card);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 4px rgba(28, 23, 19, 0.04);
 }
 
 .page-header h2 {
@@ -211,6 +228,11 @@ body {
   border-radius: var(--radius);
   padding: 20px 22px;
   box-shadow: 0 1px 2px rgba(28, 23, 19, 0.02);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: 0 2px 8px rgba(28, 23, 19, 0.04);
 }
 
 .card-title {
@@ -249,6 +271,12 @@ body {
   border-radius: var(--radius);
   padding: 16px 18px;
   position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(28, 23, 19, 0.05);
 }
 
 .metric-card.terracotta { border-top: 2px solid var(--accent-terracotta); }
@@ -282,12 +310,18 @@ body {
   font-size: 13px;
   width: 100%;
   outline: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-input:focus, .form-select:focus {
   border-color: var(--accent-terracotta);
-  box-shadow: 0 0 0 1px var(--accent-terracotta);
+  box-shadow: 0 0 0 2px rgba(184, 82, 38, 0.12);
+}
+
+.form-input:disabled, .form-select:disabled {
+  background: var(--sand-100);
+  color: var(--text-muted);
+  cursor: not-allowed;
 }
 
 .form-input::placeholder { color: var(--text-muted); }
@@ -307,7 +341,12 @@ body {
   text-decoration: none;
   white-space: nowrap;
   font-family: 'Inter', sans-serif;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+              transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
 }
 
 .btn-primary {
@@ -318,11 +357,13 @@ body {
 
 .btn-primary:hover {
   background: var(--btn-primary-hover);
+  box-shadow: 0 2px 6px rgba(28, 25, 23, 0.15);
 }
 
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 .btn-secondary {
@@ -334,6 +375,7 @@ body {
 .btn-secondary:hover {
   background: var(--bg-card-subtle);
   border-color: #D8D2C7;
+  box-shadow: 0 1px 4px rgba(28, 23, 19, 0.04);
 }
 
 .btn-subtle {
@@ -348,7 +390,7 @@ body {
   background: transparent;
   color: var(--text-secondary);
   font-family: 'Inter', sans-serif;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
 }
 
 .btn-subtle:hover {
@@ -380,6 +422,45 @@ body {
 .badge-sage       { background: #EDF3EE; color: var(--accent-sage); border: 1px solid #D2E2D5; }
 .badge-amber      { background: #FAF4E9; color: var(--accent-ochre); border: 1px solid #ECE0CA; }
 .badge-gray       { background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border); }
+
+/* ── Data Tables ───────────────────────────────────────── */
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.data-table thead {
+  border-bottom: 2px solid var(--border);
+}
+
+.data-table th {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  text-align: left;
+  background: var(--sand-50);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.data-table tbody tr {
+  transition: background 0.1s ease;
+}
+
+.data-table tbody tr:hover {
+  background: var(--sand-50) !important;
+}
 
 /* ── Terminal / Telemetry ───────────────────────────────── */
 .terminal {
@@ -433,7 +514,7 @@ body {
   background: var(--bg-card-subtle);
   color: var(--text-secondary);
   font-family: 'JetBrains Mono', monospace;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
 }
 
 .step-btn:hover {
@@ -476,16 +557,136 @@ body {
   border-radius: 50%;
 }
 
+/* ── Pulse animation for status indicators ─────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ── Fade-in animation for loaded content ──────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ── Shimmer loading placeholder ───────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg,
+    var(--sand-100) 25%,
+    var(--sand-50) 50%,
+    var(--sand-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Range Input Styling ───────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sand-200);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-terracotta);
+  cursor: pointer;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.1s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-terracotta);
+  cursor: pointer;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Focus-visible for keyboard users ──────────────────── */
+.btn:focus-visible,
+.form-input:focus-visible,
+.form-select:focus-visible,
+.step-btn:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+}
+
 /* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: 1fr 1fr; }
   .grid-3 { grid-template-columns: 1fr 1fr; }
+  .page-body { padding: 22px 28px 36px; }
+  .page-header { padding: 22px 28px 16px; }
 }
 
 @media (max-width: 768px) {
-  .sidebar { display: none; }
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
   .main-content { margin-left: 0; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .page-body { padding: 18px 16px; }
   .page-header { padding: 18px 16px; }
+  
+  .page-header h2 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .metric-card {
+    padding: 12px 14px;
+  }
+  .card {
+    padding: 16px 14px;
+  }
+  .card-value {
+    font-size: 18px;
+  }
+}
+
+/* ── Print styles ──────────────────────────────────────── */
+@media print {
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; }
+  .btn { display: none; }
+  .page-header { position: static; }
 }

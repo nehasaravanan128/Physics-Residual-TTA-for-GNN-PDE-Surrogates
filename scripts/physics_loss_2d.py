@@ -37,8 +37,11 @@ def compute_gradient_2d(field, dx=1.0, dy=1.0):
     # Central difference kernel for dy: [[-0.5], [0], [0.5]]
     kernel_y = torch.tensor([[-0.5], [0.0], [0.5]], dtype=field.dtype, device=field.device).view(1, 1, 3, 1) / dy
 
-    grad_x = F.conv2d(field, kernel_x, padding=(0, 1))
-    grad_y = F.conv2d(field, kernel_y, padding=(1, 0))
+    # Replicate padding at physical boundaries
+    padded_x = F.pad(field, (1, 1, 0, 0), mode="replicate")
+    padded_y = F.pad(field, (0, 0, 1, 1), mode="replicate")
+    grad_x = F.conv2d(padded_x, kernel_x)
+    grad_y = F.conv2d(padded_y, kernel_y)
 
     if squeeze:
         return grad_x.squeeze(), grad_y.squeeze()
@@ -68,7 +71,8 @@ def compute_laplacian_2d(field, dx=1.0, dy=1.0):
         [0.0, 1.0, 0.0]
     ], dtype=field.dtype, device=field.device).view(1, 1, 3, 3) / (dx * dy)
 
-    lap = F.conv2d(field, lap_kernel, padding=1)
+    padded = F.pad(field, (1, 1, 1, 1), mode="replicate")
+    lap = F.conv2d(padded, lap_kernel)
 
     if squeeze:
         return lap.squeeze()

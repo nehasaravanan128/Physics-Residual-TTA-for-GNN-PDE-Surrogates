@@ -233,19 +233,19 @@ def generate_shape_dataset(shape_type, output_path, Nx=128, Ny=64, num_traj=4, s
     print(f"\n[Shape Simulator] Generating 2D flow dataset for '{shape_type}'...")
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
-    all_u, all_v, all_p = [], [], []
+    all_u, all_vel, all_p, all_nu = [], [], [], []
     masks = []
 
     for t_idx in range(num_traj):
-        # Vary Reynolds number slightly across trajectories
-        re = 60.0 + t_idx * 25.0
+        # Vary Reynolds number slightly across trajectories (60 -> 195 over 10 trajectories)
+        re = 60.0 + t_idx * 15.0
         u_in = 0.04 + (t_idx % 2) * 0.008
 
         if shape_type == "cylinder":
             r = Ny // 10 + (t_idx % 3) * 2
             mask = make_cylinder_mask(Nx, Ny, cx=Nx // 4, cy=Ny // 2, radius=r)
         elif shape_type == "airfoil":
-            aoa = 4.0 + t_idx * 3.0  # 4, 7, 10, 13 degrees angle of attack
+            aoa = 4.0 + t_idx * 1.5  # 4 -> 17.5 degrees angle of attack over 10 trajectories
             mask = make_airfoil_mask(Nx, Ny, chord=Nx // 3, cx=Nx // 4, cy=Ny // 2, angle_deg=aoa)
         elif shape_type == "square":
             sz = Ny // 6 + (t_idx % 2) * 4
@@ -265,8 +265,10 @@ def generate_shape_dataset(shape_type, output_path, Nx=128, Ny=64, num_traj=4, s
         # Compute velocity magnitude as field
         mag_traj = np.sqrt(u_traj**2 + v_traj**2)
         all_u.append(mag_traj)
-        all_v.append(v_traj)
+        all_vel.append(np.stack([u_traj, v_traj], axis=1))  # [T, 2, Ny, Nx]
         all_p.append(p_traj)
+        obs_height = max(1, np.sum(mask.any(axis=1)))
+        all_nu.append(max(1e-4, (u_in * obs_height) / max(1.0, re)))
         masks.append(mask)
         print(f"  Trajectory {t_idx+1}/{num_traj} complete (Re={re:.0f}, snapshots={len(u_traj)})")
 
@@ -280,6 +282,8 @@ def generate_shape_dataset(shape_type, output_path, Nx=128, Ny=64, num_traj=4, s
 
     with h5py.File(output_path, "w") as f:
         f.create_dataset("tensor", data=tensor_u)
+        f.create_dataset("velocity", data=np.stack(all_vel, axis=0).astype(np.float32))  # [N, T, 2, Ny, Nx] (ux, uy)
+        f.create_dataset("nu", data=np.array(all_nu, dtype=np.float32))  # lattice viscosity per trajectory
         f.create_dataset("pressure", data=tensor_p)
         f.create_dataset("obstacle_mask", data=stacked_masks)
         f.create_dataset("x-coordinate", data=x_coords)
@@ -324,8 +328,8 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", default="datasets", help="Output directory")
     parser.add_argument("--nx", type=int, default=96, help="Grid length")
     parser.add_argument("--ny", type=int, default=48, help="Grid height")
-    parser.add_argument("--traj", type=int, default=3, help="Trajectories per shape")
-    parser.add_argument("--steps", type=int, default=450, help="LBM steps per trajectory")
+    parser.add_argument("--traj", type=int, default=10, help="Trajectories per shape")
+    parser.add_argument("--steps", type=int, default=600, help="LBM steps per trajectory")
 
     args = parser.parse_args()
     if args.shape == "all":

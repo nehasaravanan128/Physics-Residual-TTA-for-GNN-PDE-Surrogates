@@ -1,0 +1,20 @@
+Using device: cpu
+Loading Burgers dataset from 1D_Burgers_Sols_Nu0.001.hdf5 (max 64 trajs)...
+Loaded 2560 graph samples -> Train: 2320 | Val: 240
+Normalization: delta_scale=4.0368e-02 | edge_scale=9.7656e-04 | state_diff_scale=1.0796e-02
+MeshGraphNet initialized (1,587,713 parameters). Starting training...
+Epoch   1 | train MSE: 0.001885 | val MSE: 0.000560 | rel_MSE: 0.002974 | MAE: 0.008780 | lr: 5.00e-04 | 396.5s (ETA: 4362s)
+Epoch   2 | train MSE: 0.001997 | val MSE: 0.000262 | rel_MSE: 0.001391 | MAE: 0.005171 | lr: 5.00e-04 | 390.3s (ETA: 3934s)
+Epoch   3 | train MSE: 0.000724 | val MSE: 0.000178 | rel_MSE: 0.000944 | MAE: 0.004789 | lr: 4.90e-04 | 348.0s (ETA: 3405s)
+Epoch   4 | train MSE: 0.000651 | val MSE: 0.000194 | rel_MSE: 0.001032 | MAE: 0.004410 | lr: 4.60e-04 | 320.0s (ETA: 2910s)
+Epoch   5 | train MSE: 0.000532 | val MSE: 0.000198 | rel_MSE: 0.001051 | MAE: 0.004474 | lr: 4.14e-04 | 312.0s (ETA: 2474s)
+Epoch   6 | train MSE: 0.000385 | val MSE: 0.000324 | rel_MSE: 0.001720 | MAE: 0.003878 | lr: 3.54e-04 | 306.9s (ETA: 2074s)
+Epoch   7 | train MSE: 0.000375 | val MSE: 0.000133 | rel_MSE: 0.000707 | MAE: 0.004289 | lr: 2.86e-04 | 290.5s (ETA: 1689s)
+Epoch   8 | train MSE: 0.000270 | val MSE: 0.000133 | rel_MSE: 0.000704 | MAE: 0.002972 | lr: 2.15e-04 | 290.5s (ETA: 1327s)
+Epoch   9 | train MSE: 0.000203 | val MSE: 0.000102 | rel_MSE: 0.000544 | MAE: 0.003378 | lr: 1.47e-04 | 290.4s (ETA: 982s)
+Epoch  10 | train MSE: 0.000144 | val MSE: 0.000040 | rel_MSE: 0.000212 | MAE: 0.001399 | lr: 8.71e-05 | 290.3s (ETA: 647s)
+Epoch  11 | train MSE: 0.000112 | val MSE: 0.000045 | rel_MSE: 0.000237 | MAE: 0.002995 | lr: 4.06e-05 | 290.6s (ETA: 321s)
+Epoch  12 | train MSE: 0.000089 | val MSE: 0.000023 | rel_MSE: 0.000121 | MAE: 0.000936 | lr: 1.11e-05 | 290.2s (ETA: 0s)
+
+Training complete in 3816.4s
+Best val MSE: 0.000023 — saved to ../real_burgers_model_v2.pt

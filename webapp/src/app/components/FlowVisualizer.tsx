@@ -53,8 +53,8 @@ export default function FlowVisualizer({
   const [showTrails, setShowTrails] = useState(true);
   const [showShockFront, setShowShockFront] = useState(true);
 
-  // Hover state
-  const [hoverData, setHoverData] = useState<{
+  // Hover state ref for 60fps crosshairs without triggering React re-renders
+  const hoverDataRef = useRef<{
     x: number;
     trueVal: number;
     predVal: number;
@@ -69,11 +69,31 @@ export default function FlowVisualizer({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const heatmapCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const hudRef = useRef<HTMLDivElement | null>(null);
+  const sliderRef = useRef<HTMLInputElement | null>(null);
+  const timeLabelRef = useRef<HTMLSpanElement | null>(null);
+  const timeBadgeRef = useRef<HTMLSpanElement | null>(null);
+
   const continuousTimeRef = useRef<number>(activeStep);
   const playDirectionRef = useRef<number>(1);
   const frameTimeRef = useRef<number>(0);
   const isPlayingRef = useRef<boolean>(isPlaying);
   const playbackSpeedRef = useRef<number>(playbackSpeed);
+
+  // Canvas size and DPR cache to eliminate getBoundingClientRect layout thrashing
+  const canvasSizeRef = useRef<{ width: number; height: number; dpr: number; left: number; top: number } | null>(null);
+
+  // Render flags ref to prevent tearing down the RAF loop on toggle
+  const flagsRef = useRef({
+    showTrue,
+    showPred,
+    showError,
+    showTrails,
+    showShockFront,
+  });
+  useEffect(() => {
+    flagsRef.current = { showTrue, showPred, showError, showTrails, showShockFront };
+  }, [showTrue, showPred, showError, showTrails, showShockFront]);
 
   // Sync refs
   useEffect(() => {
@@ -86,16 +106,26 @@ export default function FlowVisualizer({
   // Sync external activeStep changes (e.g. from step buttons)
   useEffect(() => {
     continuousTimeRef.current = activeStep;
+    if (sliderRef.current) sliderRef.current.value = String(activeStep);
+    if (timeLabelRef.current) timeLabelRef.current.textContent = `t = ${activeStep.toFixed(2)} / ${Math.max(1, steps.length - 1)}`;
+    if (timeBadgeRef.current) timeBadgeRef.current.textContent = `60-120 FPS Ultra-Smooth Physical Dynamics · Frame ${activeStep.toFixed(2)}`;
     setContinuousTime(activeStep);
-  }, [activeStep]);
+  }, [activeStep, steps.length]);
+
+  // Pre-allocated typed arrays and point buffers to eliminate Garbage Collection micro-stutters
+  const trueValsBufRef = useRef<Float32Array | null>(null);
+  const predValsBufRef = useRef<Float32Array | null>(null);
+  const predPointsBufRef = useRef<Array<{ x: number; y: number }>>([]);
+  const truePointsBufRef = useRef<Array<{ x: number; y: number }>>([]);
 
   // Tracer particles with motion trails
   const particlesRef = useRef<TracerParticle[]>([]);
-  // Throttle React display updates to ~12fps to avoid re-render stutter
+  // Low-frequency React state sync (every ~150ms) to keep non-canvas UI updated without dropped frames
   const displayUpdateRef = useRef<number>(0);
+
   useEffect(() => {
     const pts: TracerParticle[] = [];
-    const count = 70;
+    const count = 75;
     for (let i = 0; i < count; i++) {
       const maxAge = 60 + Math.floor(Math.random() * 80);
       pts.push({
@@ -170,9 +200,9 @@ export default function FlowVisualizer({
     }
   }, []);
 
-  // High-DPI setup helper
+  // High-DPI setup helper for static canvases (e.g. Space-Time Waterfall)
   const setupCanvas = useCallback((canvas: HTMLCanvasElement) => {
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    const dpr = typeof window !== "undefined" ? Math.min(2, window.devicePixelRatio || 1) : 1;
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return null;
 
@@ -189,57 +219,48 @@ export default function FlowVisualizer({
     return { ctx, width: rect.width, height: rect.height };
   }, []);
 
-  // Continuous 60 FPS Animation Loop
+  // ResizeObserver for zero-overhead size caching
   useEffect(() => {
-    let animId: number;
-    let lastTimestamp = performance.now();
+    const canvas = waveCanvasRef.current;
+    if (!canvas || activeTab !== "wave") return;
 
-    const loop = (timestamp: number) => {
-      const deltaSec = Math.min(0.04, (timestamp - lastTimestamp) / 1000);
-      lastTimestamp = timestamp;
-      frameTimeRef.current += deltaSec;
+    const measure = () => {
+      const dpr = typeof window !== "undefined" ? Math.min(2, window.devicePixelRatio || 1) : 1;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
 
-      // Advance continuous time smoothly with ping-pong oscillation for unbroken, organic wave dynamics
-      if (isPlayingRef.current && steps.length > 1) {
-        const speedRate = 0.95 * playbackSpeedRef.current; // steps per second
-        let nextTime = continuousTimeRef.current + speedRate * deltaSec * playDirectionRef.current;
-        if (nextTime >= steps.length - 1) {
-          nextTime = steps.length - 1;
-          playDirectionRef.current = -1; // smoothly reverse / relax
-        } else if (nextTime <= 0) {
-          nextTime = 0;
-          playDirectionRef.current = 1; // smoothly steepen shock
-        }
-        continuousTimeRef.current = nextTime;
-        // Only push to React state at ~12fps (every ~83ms) to avoid re-render stutter
-        if (timestamp - displayUpdateRef.current > 83) {
-          displayUpdateRef.current = timestamp;
-          setContinuousTime(nextTime);
-        }
+      const targetW = Math.round(rect.width * dpr);
+      const targetH = Math.round(rect.height * dpr);
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
       }
-
-      // Decay interactive ripple perturbation
-      if (rippleRef.current) {
-        rippleRef.current.amp *= 0.96;
-        if (rippleRef.current.amp < 0.001) rippleRef.current = null;
-      }
-
-      // Render 1D Wave canvas if active
-      if (activeTab === "wave") {
-        renderWaveCanvas();
-      }
-
-      animId = requestAnimationFrame(loop);
+      canvasSizeRef.current = {
+        width: rect.width,
+        height: rect.height,
+        dpr,
+        left: rect.left,
+        top: rect.top,
+      };
     };
 
-    animId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animId);
-  }, [activeTab, steps, minVal, maxVal, showTrue, showPred, showError, showTrails, showShockFront, hoverData, setupCanvas]);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(canvas);
+    window.addEventListener("resize", measure, { passive: true });
+    window.addEventListener("scroll", measure, { passive: true });
 
-  // Compute smooth time-interpolated velocity array at continuous time t
-  const getInterpolatedField = useCallback((tFloat: number) => {
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure);
+    };
+  }, [activeTab]);
+
+  // Compute smooth time-interpolated velocity array at continuous time t without heap allocations
+  const getInterpolatedFieldFast = useCallback((tFloat: number) => {
     const nSteps = steps.length;
-    if (nSteps === 0) return { trueVals: [], predVals: [], tLabel: 0, shockX: 0.5, maxGrad: 0 };
+    if (nSteps === 0) return { nPoints: 0, shockX: 0.5, maxGrad: 0 };
 
     const clampedT = Math.max(0, Math.min(nSteps - 1, tFloat));
     const k0 = Math.floor(clampedT);
@@ -250,13 +271,20 @@ export default function FlowVisualizer({
     const step1 = steps[k1];
     const n = step0.true.length;
 
-    const trueVals = new Float32Array(n);
-    const predVals = new Float32Array(n);
+    // Ensure preallocated buffers are appropriately sized
+    if (!trueValsBufRef.current || trueValsBufRef.current.length !== n) {
+      trueValsBufRef.current = new Float32Array(n);
+      predValsBufRef.current = new Float32Array(n);
+    }
+    const trueVals = trueValsBufRef.current!;
+    const predVals = predValsBufRef.current!;
 
     let maxGrad = 0;
     let shockX = 0.5;
-
     const ripple = rippleRef.current;
+
+    // Cosine ease alpha for buttery wave continuity
+    const easeAlpha = 0.5 * (1 - Math.cos(Math.PI * alpha));
 
     for (let i = 0; i < n; i++) {
       const tv0 = step0.true[i];
@@ -264,12 +292,9 @@ export default function FlowVisualizer({
       const pv0 = step0.predicted[i];
       const pv1 = step1.predicted[i];
 
-      // Smooth cosine ease interpolation between frames
-      const easeAlpha = 0.5 * (1 - Math.cos(Math.PI * alpha));
       let tv = tv0 + (tv1 - tv0) * easeAlpha;
       let pv = pv0 + (pv1 - pv0) * easeAlpha;
 
-      // Add interactive perturbation ripple if user clicked on canvas
       if (ripple) {
         const xNorm = i / (n - 1);
         const dist = Math.abs(xNorm - ripple.x);
@@ -290,18 +315,22 @@ export default function FlowVisualizer({
       }
     }
 
-    const tDisplay = step0.t + alpha * ((step1.t - step0.t) || 1);
-    return { trueVals, predVals, tLabel: tDisplay, shockX, maxGrad: maxGrad * n };
+    return { nPoints: n, shockX, maxGrad: maxGrad * n };
   }, [steps]);
 
-  // Main 60 FPS Wave Canvas Renderer
-  const renderWaveCanvas = () => {
+  // Main 60-120 FPS Wave Canvas Renderer
+  const renderWaveCanvas = useCallback(() => {
     const canvas = waveCanvasRef.current;
     if (!canvas) return;
 
-    const res = setupCanvas(canvas);
-    if (!res) return;
-    const { ctx, width, height } = res;
+    const size = canvasSizeRef.current;
+    if (!size || size.width === 0 || size.height === 0) return;
+
+    const { width, height, dpr } = size;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const margin = { top: 22, right: 30, bottom: 44, left: 54 };
     const plotW = width - margin.left - margin.right;
@@ -355,10 +384,12 @@ export default function FlowVisualizer({
       ctx.stroke();
     }
 
-    // Get continuous 60fps interpolated field
-    const { trueVals, predVals, shockX, maxGrad } = getInterpolatedField(continuousTimeRef.current);
-    const nPoints = trueVals.length;
+    // Get continuous interpolated field into preallocated buffers
+    const { nPoints, shockX } = getInterpolatedFieldFast(continuousTimeRef.current);
     if (nPoints === 0) return;
+
+    const trueVals = trueValsBufRef.current!;
+    const predVals = predValsBufRef.current!;
 
     const getXPix = (idx: number) => margin.left + (idx / (nPoints - 1)) * plotW;
     const getYPix = (val: number) => margin.top + ((maxVal - val) / (maxVal - minVal)) * plotH;
@@ -369,23 +400,40 @@ export default function FlowVisualizer({
       if (points.length === 1) { ctx.moveTo(points[0].x, points[0].y); return; }
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 0; i < points.length - 1; i++) {
-        const xc = (points[i].x + points[i + 1].x) / 2;
-        const yc = (points[i].y + points[i + 1].y) / 2;
+        const xc = (points[i].x + points[i + 1].x) * 0.5;
+        const yc = (points[i].y + points[i + 1].y) * 0.5;
         ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
       }
       ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
     };
 
-    const predPoints: { x: number; y: number }[] = [];
-    const truePoints: { x: number; y: number }[] = [];
-    for (let i = 0; i < nPoints; i++) {
-      predPoints.push({ x: getXPix(i), y: getYPix(predVals[i]) });
-      truePoints.push({ x: getXPix(i), y: getYPix(trueVals[i]) });
+    // Re-use points buffers without GC churn
+    let predPoints = predPointsBufRef.current;
+    let truePoints = truePointsBufRef.current;
+    if (predPoints.length !== nPoints) {
+      predPoints = new Array(nPoints);
+      truePoints = new Array(nPoints);
+      for (let i = 0; i < nPoints; i++) {
+        predPoints[i] = { x: 0, y: 0 };
+        truePoints[i] = { x: 0, y: 0 };
+      }
+      predPointsBufRef.current = predPoints;
+      truePointsBufRef.current = truePoints;
     }
 
+    for (let i = 0; i < nPoints; i++) {
+      const px = getXPix(i);
+      predPoints[i].x = px;
+      predPoints[i].y = getYPix(predVals[i]);
+      truePoints[i].x = px;
+      truePoints[i].y = getYPix(trueVals[i]);
+    }
+
+    const { showTrue: fShowTrue, showPred: fShowPred, showError: fShowError, showTrails: fShowTrails, showShockFront: fShowShock } = flagsRef.current;
+
     // 1. Shaded Error Ribbon
-    if (showError && showTrue && showPred) {
-      ctx.fillStyle = "rgba(181, 53, 38, 0.08)";
+    if (fShowError && fShowTrue && fShowPred) {
+      ctx.fillStyle = "rgba(181, 53, 38, 0.09)";
       ctx.beginPath();
       drawSmooth(truePoints);
       for (let i = nPoints - 1; i >= 0; i--) {
@@ -396,9 +444,9 @@ export default function FlowVisualizer({
     }
 
     // 2. Smooth Fluid Body Gradient beneath prediction
-    if (showPred) {
+    if (fShowPred) {
       const fluidGrad = ctx.createLinearGradient(0, margin.top, 0, height - margin.bottom);
-      fluidGrad.addColorStop(0, "rgba(184, 82, 38, 0.15)");
+      fluidGrad.addColorStop(0, "rgba(184, 82, 38, 0.16)");
       fluidGrad.addColorStop(0.6, "rgba(184, 82, 38, 0.05)");
       fluidGrad.addColorStop(1, "rgba(184, 82, 38, 0.00)");
 
@@ -412,7 +460,7 @@ export default function FlowVisualizer({
     }
 
     // 3. Fluid Streamline Streaklines (Laminar Flow Particles with Motion Ribbons)
-    if (showTrails) {
+    if (fShowTrails) {
       ctx.save();
       ctx.beginPath();
       ctx.rect(margin.left, margin.top, plotW, plotH);
@@ -421,9 +469,9 @@ export default function FlowVisualizer({
       const pts = particlesRef.current;
       const bottomY = height - margin.bottom;
 
-      for (const p of pts) {
+      for (let pi = 0; pi < pts.length; pi++) {
+        const p = pts[pi];
         p.age++;
-        // Continuous cycle replenishment: respawn expired particles upstream
         if (p.age >= p.maxAge || p.x > 1.02 || p.x < -0.02) {
           p.x = -0.02 + Math.random() * 0.15;
           p.y = Math.random();
@@ -435,24 +483,18 @@ export default function FlowVisualizer({
         const idx = Math.min(nPoints - 1, Math.max(0, Math.floor(Math.max(0, p.x) * (nPoints - 1))));
         const uLocal = predVals[idx] ?? 0.5;
 
-        // Physical flow advection velocity:
-        // Convective bulk velocity + local Eulerian perturbation
-        // Accelerates over wave crest, decelerates & compresses across shock front
         const uBulk = 0.44;
         const uEffective = Math.max(0.14, uBulk + uLocal * 0.55);
         const moveDist = uEffective * 0.0048 * playbackSpeedRef.current * p.speedMult;
         p.x += moveDist;
 
         const px = margin.left + p.x * plotW;
-        // Float dynamically within fluid wave column
         const surfY = getYPix(uLocal);
         const py = surfY + 4 + p.y * Math.max(12, bottomY - surfY - 8);
 
-        // Maintain tail history with 5 points for sleek luminous fluid beads (no long rigid matchsticks)
         p.trail.push({ x: px, y: py });
         if (p.trail.length > 5) p.trail.shift();
 
-        // Render soft fluid comet trail
         if (p.trail.length > 1) {
           ctx.beginPath();
           ctx.moveTo(p.trail[0].x, p.trail[0].y);
@@ -467,7 +509,6 @@ export default function FlowVisualizer({
           ctx.stroke();
         }
 
-        // Particle head — luminous fluid tracer droplet
         const headRadius = p.size * (0.8 + Math.min(0.4, uEffective * 0.4));
         const headAlpha = Math.min(0.85, 0.4 + (1 - p.age / p.maxAge) * 0.45);
         ctx.fillStyle = `rgba(184, 82, 38, ${headAlpha})`;
@@ -479,11 +520,9 @@ export default function FlowVisualizer({
     }
 
     // 4. Dynamic Shock Front Discontinuity Indicator
-    if (showShockFront && shockX >= 0.02 && shockX <= 0.98) {
+    if (fShowShock && shockX >= 0.02 && shockX <= 0.98) {
       const sx = margin.left + shockX * plotW;
       ctx.save();
-
-      // Compression hairline
       ctx.strokeStyle = "rgba(46, 99, 67, 0.65)";
       ctx.lineWidth = 1.2;
       ctx.setLineDash([4, 4]);
@@ -493,90 +532,90 @@ export default function FlowVisualizer({
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Shock front badge tag
       ctx.fillStyle = "#2E6343";
       ctx.font = "9.5px 'JetBrains Mono', monospace";
       ctx.textAlign = "center";
       ctx.fillText(`Shock Front (x=${shockX.toFixed(2)})`, sx, margin.top - 6);
-
       ctx.restore();
     }
 
-    // 5. Ground Truth Curve (Smooth Pine Sage) with glow
-    if (showTrue) {
-      // Glow layer
-      ctx.save();
-      ctx.shadowColor = "rgba(46, 99, 67, 0.3)";
-      ctx.shadowBlur = 6;
-      ctx.strokeStyle = "#2E6343";
-      ctx.lineWidth = 3.0;
+    // 5. Ground Truth Curve (Fast Hardware Glow Layer instead of slow shadowBlur)
+    if (fShowTrue) {
+      // Wide soft bloom
+      ctx.strokeStyle = "rgba(46, 99, 67, 0.18)";
+      ctx.lineWidth = 7.0;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
       drawSmooth(truePoints);
       ctx.stroke();
-      ctx.restore();
 
-      // Crisp line on top
+      // Core glow
+      ctx.strokeStyle = "rgba(46, 99, 67, 0.4)";
+      ctx.lineWidth = 3.8;
+      ctx.beginPath();
+      drawSmooth(truePoints);
+      ctx.stroke();
+
+      // Crisp foreground stroke
       ctx.strokeStyle = "#2E6343";
       ctx.lineWidth = 2.0;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
       ctx.beginPath();
       drawSmooth(truePoints);
       ctx.stroke();
     }
 
-    // 6. Surrogate / TTA Prediction Curve (Burnt Terracotta) with glow
-    if (showPred) {
-      // Glow layer
-      ctx.save();
-      ctx.shadowColor = "rgba(184, 82, 38, 0.35)";
-      ctx.shadowBlur = 7;
-      ctx.strokeStyle = "#B85226";
-      ctx.lineWidth = 3.0;
+    // 6. Surrogate / TTA Prediction Curve (Fast Hardware Glow Layer)
+    if (fShowPred) {
+      // Wide soft bloom
+      ctx.strokeStyle = "rgba(184, 82, 38, 0.20)";
+      ctx.lineWidth = 8.0;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
       drawSmooth(predPoints);
       ctx.stroke();
-      ctx.restore();
 
-      // Crisp line on top
+      // Core glow
+      ctx.strokeStyle = "rgba(184, 82, 38, 0.45)";
+      ctx.lineWidth = 4.0;
+      ctx.beginPath();
+      drawSmooth(predPoints);
+      ctx.stroke();
+
+      // Crisp foreground stroke
       ctx.strokeStyle = "#B85226";
       ctx.lineWidth = 2.2;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
       ctx.beginPath();
       drawSmooth(predPoints);
       ctx.stroke();
     }
 
-    // 7. Interactive Crosshair & Cursor HUD
-    if (hoverData) {
+    // 7. Interactive Crosshair & Cursor HUD (Read directly from ref for 60-120fps tracking)
+    const hData = hoverDataRef.current;
+    if (hData) {
       ctx.strokeStyle = "#8F8274";
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
-      ctx.moveTo(hoverData.canvasX, margin.top);
-      ctx.lineTo(hoverData.canvasX, height - margin.bottom);
+      ctx.moveTo(hData.canvasX, margin.top);
+      ctx.lineTo(hData.canvasX, height - margin.bottom);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Point dots
-      if (showTrue) {
+      if (fShowTrue) {
         ctx.fillStyle = "#2E6343";
         ctx.beginPath();
-        ctx.arc(hoverData.canvasX, getYPix(hoverData.trueVal), 4, 0, Math.PI * 2);
+        ctx.arc(hData.canvasX, getYPix(hData.trueVal), 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = "#FFFFFF";
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-      if (showPred) {
+      if (fShowPred) {
         ctx.fillStyle = "#B85226";
         ctx.beginPath();
-        ctx.arc(hoverData.canvasX, getYPix(hoverData.predVal), 4, 0, Math.PI * 2);
+        ctx.arc(hData.canvasX, getYPix(hData.predVal), 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = "#FFFFFF";
         ctx.lineWidth = 1.5;
@@ -595,24 +634,84 @@ export default function FlowVisualizer({
     ctx.rotate(-Math.PI / 2);
     ctx.fillText("Fluid Velocity u(x, t)", 0, 0);
     ctx.restore();
-  };
+  }, [getInterpolatedFieldFast, minVal, maxVal]);
 
-  // Handle Interactive Mouse Hover & Click Ripple
+  // Continuous 60-120 FPS High-Performance Animation Loop
+  useEffect(() => {
+    let animId: number;
+    let lastTimestamp = performance.now();
+
+    const loop = (timestamp: number) => {
+      // Sub-millisecond delta time calculation with 120Hz/144Hz monitor support
+      const deltaSec = Math.min(0.033, (timestamp - lastTimestamp) / 1000);
+      lastTimestamp = timestamp;
+      frameTimeRef.current += deltaSec;
+
+      if (isPlayingRef.current && steps.length > 1) {
+        const speedRate = 0.95 * playbackSpeedRef.current; // steps per second
+        let nextTime = continuousTimeRef.current + speedRate * deltaSec * playDirectionRef.current;
+        if (nextTime >= steps.length - 1) {
+          nextTime = steps.length - 1;
+          playDirectionRef.current = -1; // smoothly reverse / relax
+        } else if (nextTime <= 0) {
+          nextTime = 0;
+          playDirectionRef.current = 1; // smoothly steepen shock
+        }
+        continuousTimeRef.current = nextTime;
+
+        // Directly update DOM elements without causing React re-renders for buttery 60-120 FPS
+        if (sliderRef.current && document.activeElement !== sliderRef.current) {
+          sliderRef.current.value = String(nextTime);
+        }
+        if (timeLabelRef.current) {
+          timeLabelRef.current.textContent = `t = ${nextTime.toFixed(2)} / ${steps.length - 1}`;
+        }
+        if (timeBadgeRef.current) {
+          timeBadgeRef.current.textContent = `60-120 FPS Ultra-Smooth Physical Dynamics · Frame ${nextTime.toFixed(2)}`;
+        }
+
+        // Low-frequency React state sync (every ~160ms) to keep waterfall or external listeners happy
+        if (timestamp - displayUpdateRef.current > 160) {
+          displayUpdateRef.current = timestamp;
+          setContinuousTime(nextTime);
+        }
+      }
+
+      // Decay interactive ripple perturbation
+      if (rippleRef.current) {
+        rippleRef.current.amp *= 0.96;
+        if (rippleRef.current.amp < 0.001) rippleRef.current = null;
+      }
+
+      // Render 1D Wave canvas if active
+      if (activeTab === "wave") {
+        renderWaveCanvas();
+      }
+
+      animId = requestAnimationFrame(loop);
+    };
+
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [activeTab, steps.length, renderWaveCanvas]);
+
+  // Handle Interactive Mouse Hover & Click Ripple with 0ms overhead
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = waveCanvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
+    const size = canvasSizeRef.current;
+    if (!size) return;
 
+    const clientX = e.clientX - size.left;
     const margin = { top: 22, right: 30, bottom: 44, left: 54 };
-    const plotW = rect.width - margin.left - margin.right;
+    const plotW = size.width - margin.left - margin.right;
 
-    if (clientX >= margin.left && clientX <= rect.width - margin.right) {
+    if (clientX >= margin.left && clientX <= size.width - margin.right) {
       const normX = (clientX - margin.left) / plotW;
-      const { trueVals, predVals } = getInterpolatedField(continuousTimeRef.current);
-      const nPoints = trueVals.length;
-      if (nPoints === 0) return;
+      getInterpolatedFieldFast(continuousTimeRef.current);
+      const trueVals = trueValsBufRef.current;
+      const predVals = predValsBufRef.current;
+      if (!trueVals || !predVals) return;
 
+      const nPoints = trueVals.length;
       const idx = Math.min(nPoints - 1, Math.max(0, Math.round(normX * (nPoints - 1))));
       const tv = trueVals[idx];
       const pv = predVals[idx];
@@ -620,31 +719,48 @@ export default function FlowVisualizer({
       const prevVal = predVals[Math.max(0, idx - 1)];
       const grad = (nextVal - prevVal) / (2.0 / (nPoints - 1));
 
-      setHoverData({
+      const hData = {
         x: normX,
         trueVal: tv,
         predVal: pv,
         error: Math.abs(tv - pv),
         grad: grad,
         canvasX: clientX,
-      });
+      };
+      hoverDataRef.current = hData;
+
+      // Update HUD directly in DOM without React re-rendering
+      if (hudRef.current) {
+        hudRef.current.innerHTML = `
+          <span>x: <strong>${normX.toFixed(3)}</strong></span>
+          <span style="color: var(--accent-sage)">True: <strong>${tv.toFixed(4)}</strong></span>
+          <span style="color: var(--accent-terracotta)">Pred: <strong>${pv.toFixed(4)}</strong></span>
+          <span style="color: var(--accent-brick)">Δu: <strong>${Math.abs(tv - pv).toExponential(2)}</strong></span>
+          <span style="color: var(--text-muted)">∂u/∂x: <strong>${grad.toFixed(1)}</strong></span>
+        `;
+      }
     } else {
-      setHoverData(null);
+      hoverDataRef.current = null;
+      if (hudRef.current) {
+        hudRef.current.innerHTML = `<span style="font-size: 11px; color: var(--text-muted)">Click canvas to trigger pressure ripple</span>`;
+      }
     }
   };
 
   const handleCanvasMouseLeave = () => {
-    setHoverData(null);
+    hoverDataRef.current = null;
+    if (hudRef.current) {
+      hudRef.current.innerHTML = `<span style="font-size: 11px; color: var(--text-muted)">Click canvas to trigger pressure ripple</span>`;
+    }
   };
 
   // Inject interactive physical wave ripple on click
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = waveCanvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
+    const size = canvasSizeRef.current;
+    if (!size) return;
     const margin = { top: 22, right: 30, bottom: 44, left: 54 };
-    const plotW = rect.width - margin.left - margin.right;
-    const normX = Math.max(0, Math.min(1, (e.clientX - rect.left - margin.left) / plotW));
+    const plotW = size.width - margin.left - margin.right;
+    const normX = Math.max(0, Math.min(1, (e.clientX - size.left - margin.left) / plotW));
 
     rippleRef.current = {
       x: normX,
@@ -798,8 +914,8 @@ export default function FlowVisualizer({
             <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>
               {title}
             </h3>
-            <span className="badge badge-gray" style={{ fontSize: 10.5 }}>
-              60 FPS Continuous Physical Dynamics · Frame {continuousTime.toFixed(2)}
+            <span ref={timeBadgeRef} className="badge badge-gray" style={{ fontSize: 10.5 }}>
+              60-120 FPS Ultra-Smooth Physical Dynamics · Frame {continuousTime.toFixed(2)}
             </span>
           </div>
           <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
@@ -815,7 +931,7 @@ export default function FlowVisualizer({
             style={{ fontSize: 11.5, padding: "4px 10px" }}
           >
             <Activity size={12} style={{ marginRight: 5 }} />
-            Continuous 60 FPS Fluid Wave
+            Continuous 60-120 FPS Wave
           </button>
           <button
             onClick={() => setActiveTab("heatmap")}
@@ -882,7 +998,7 @@ export default function FlowVisualizer({
                     onChange={(e) => setShowTrails(e.target.checked)}
                     style={{ accentColor: "var(--accent-terracotta)" }}
                   />
-                  Fluid Streakline Trails
+                  Fluid Streaklines
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: "var(--text-secondary)" }}>
                   <input
@@ -891,33 +1007,28 @@ export default function FlowVisualizer({
                     onChange={(e) => setShowShockFront(e.target.checked)}
                     style={{ accentColor: "var(--accent-sage)" }}
                   />
-                  Shock Discontinuity Marker
+                  Shock Marker
                 </label>
               </div>
 
-              {/* Precision HUD readout */}
-              {hoverData ? (
-                <div
-                  style={{
-                    background: "var(--bg-card-subtle)",
-                    border: "1px solid var(--border)",
-                    padding: "3px 10px",
-                    borderRadius: 4,
-                    fontFamily: "JetBrains Mono, monospace",
-                    fontSize: 10.5,
-                    display: "flex",
-                    gap: 10,
-                  }}
-                >
-                  <span>x: <strong>{hoverData.x.toFixed(3)}</strong></span>
-                  <span style={{ color: "var(--accent-sage)" }}>True: <strong>{hoverData.trueVal.toFixed(4)}</strong></span>
-                  <span style={{ color: "var(--accent-terracotta)" }}>Pred: <strong>{hoverData.predVal.toFixed(4)}</strong></span>
-                  <span style={{ color: "var(--accent-brick)" }}>Δu: <strong>{hoverData.error.toExponential(2)}</strong></span>
-                  <span style={{ color: "var(--text-muted)" }}>∂u/∂x: <strong>{hoverData.grad.toFixed(1)}</strong></span>
-                </div>
-              ) : (
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Click canvas to trigger pressure ripple</span>
-              )}
+              {/* Precision HUD readout — Updated directly via DOM ref for 60-120fps responsiveness */}
+              <div
+                ref={hudRef}
+                style={{
+                  background: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border)",
+                  padding: "3px 10px",
+                  borderRadius: 4,
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: 10.5,
+                  display: "flex",
+                  gap: 10,
+                  minHeight: 24,
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Hover crosshairs to probe · Click wave to perturb</span>
+              </div>
             </div>
 
             {/* Canvas Viewport */}
@@ -1059,6 +1170,9 @@ export default function FlowVisualizer({
           <button
             onClick={() => {
               continuousTimeRef.current = 0;
+              if (sliderRef.current) sliderRef.current.value = "0";
+              if (timeLabelRef.current) timeLabelRef.current.textContent = `t = 0.00 / ${steps.length - 1}`;
+              if (timeBadgeRef.current) timeBadgeRef.current.textContent = `60-120 FPS Ultra-Smooth Physical Dynamics · Frame 0.00`;
               setContinuousTime(0);
               if (onStepChange) onStepChange(0);
             }}
@@ -1072,14 +1186,17 @@ export default function FlowVisualizer({
           {/* Smooth Continuous Scrubber Slider */}
           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
             <input
+              ref={sliderRef}
               type="range"
               min={0}
               max={steps.length - 1}
               step={0.01}
-              value={continuousTime}
+              defaultValue={continuousTime}
               onChange={(e) => {
                 const val = Number(e.target.value);
                 continuousTimeRef.current = val;
+                if (timeLabelRef.current) timeLabelRef.current.textContent = `t = ${val.toFixed(2)} / ${steps.length - 1}`;
+                if (timeBadgeRef.current) timeBadgeRef.current.textContent = `60-120 FPS Ultra-Smooth Physical Dynamics · Frame ${val.toFixed(2)}`;
                 setContinuousTime(val);
                 if (onStepChange) onStepChange(Math.round(val));
               }}
@@ -1090,6 +1207,7 @@ export default function FlowVisualizer({
               }}
             />
             <span
+              ref={timeLabelRef}
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 11.5,
@@ -1105,7 +1223,7 @@ export default function FlowVisualizer({
 
           {/* Speed Selector */}
           <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-            {[0.5, 1, 2].map((spd) => (
+            {[0.5, 1, 1.5, 2].map((spd) => (
               <button
                 key={spd}
                 onClick={() => setPlaybackSpeed(spd)}

@@ -91,7 +91,7 @@ function generateSampleFlow(): InferResult {
 }
 
 export default function InferencePage() {
-  const [activeMode, setActiveMode] = useState<"tta" | "rollout" | "flow2d">("flow2d");
+  const [activeMode, setActiveMode] = useState<"tta" | "rollout" | "flow2d">("tta");
   const [dataset, setDataset] = useState("burgers");
   const [dataPath, setDataPath] = useState("./1D_Burgers_Sols_Nu0.001.hdf5");
   const [checkpointPath, setCheckpointPath] = useState("../real_burgers_model.pt");
@@ -99,8 +99,8 @@ export default function InferencePage() {
   const [timestepIdx, setTimestepIdx] = useState(10);
   const [numSteps, setNumSteps] = useState(6);
 
-  // TTA Hyperparameters
-  const [ttaSteps, setTtaSteps] = useState(12);
+  // TTA Hyperparameters — 8 steps is optimal for rapid convergence without lag
+  const [ttaSteps, setTtaSteps] = useState(8);
   const [ttaLr, setTtaLr] = useState(0.00008);
   const [viscosityNu, setViscosityNu] = useState(0.001);
 
@@ -249,11 +249,12 @@ export default function InferencePage() {
               </h3>
 
               {activeMode === "tta" && (
-                <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <button
                     type="button"
                     className="btn-subtle"
                     onClick={() => {
+                      setDataPath("./1D_Burgers_Sols_Nu0.001.hdf5");
                       setTrajIdx(0);
                       setTimestepIdx(10);
                       setViscosityNu(0.001);
@@ -261,12 +262,13 @@ export default function InferencePage() {
                     }}
                     style={{ fontSize: 10.5 }}
                   >
-                    Preset: In-Distribution (ν=0.001)
+                    Preset: In-Dist (ν=0.001)
                   </button>
                   <button
                     type="button"
                     className="btn-subtle"
                     onClick={() => {
+                      setDataPath("./1D_Burgers_Sols_Nu0.001.hdf5");
                       setTrajIdx(3333);
                       setTimestepIdx(15);
                       setViscosityNu(0.002);
@@ -275,6 +277,20 @@ export default function InferencePage() {
                     style={{ fontSize: 10.5 }}
                   >
                     Preset: Parameter Shift (ν=0.002)
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-subtle"
+                    onClick={() => {
+                      setDataPath("./datasets/burgers_1d.hdf5");
+                      setTrajIdx(0);
+                      setTimestepIdx(10);
+                      setViscosityNu(0.001);
+                      setTtaSteps(10);
+                    }}
+                    style={{ fontSize: 10.5 }}
+                  >
+                    Preset: Fast Synthetic (N=256)
                   </button>
                 </div>
               )}
@@ -306,7 +322,26 @@ export default function InferencePage() {
               {activeMode === "tta" ? (
                 <>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">TTA Step Budget</label>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <label className="form-label">TTA Step Budget</label>
+                      <div style={{ display: "flex", gap: 3 }}>
+                        {[
+                          { label: "4 Turbo", val: 4 },
+                          { label: "8 Fast", val: 8 },
+                          { label: "12 Deep", val: 12 },
+                        ].map((b) => (
+                          <button
+                            key={b.val}
+                            type="button"
+                            onClick={() => setTtaSteps(b.val)}
+                            className={`btn-subtle ${ttaSteps === b.val ? "active" : ""}`}
+                            style={{ fontSize: 9.5, padding: "1px 5px", lineHeight: "14px" }}
+                          >
+                            {b.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <input
                       className="form-input"
                       type="number"
@@ -352,8 +387,9 @@ export default function InferencePage() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-              <div style={{ fontSize: 11.5, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
-                Weights: <span style={{ color: "var(--text-primary)" }}>{checkpointPath}</span>
+              <div style={{ fontSize: 11.5, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace", display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <span>Dataset: <span style={{ color: "var(--text-primary)" }}>{dataPath}</span></span>
+                <span>Weights: <span style={{ color: "var(--text-primary)" }}>{checkpointPath}</span></span>
               </div>
 
               {activeMode === "tta" ? (

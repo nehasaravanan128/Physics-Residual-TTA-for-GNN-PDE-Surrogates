@@ -186,7 +186,7 @@ def generate_advection_2d(output_path, num_traj=15, num_steps=40, grid=64):
     X, Y = np.meshgrid(x, y, indexing='ij')
     dt = 0.005
 
-    all_tensors = []
+    all_tensors, all_vel = [], []
     np.random.seed(456)
 
     for i in range(num_traj):
@@ -207,12 +207,14 @@ def generate_advection_2d(output_path, num_traj=15, num_steps=40, grid=64):
 
         traj = solve_advection_2d(u0, vx, vy, Lx, Ly, dt, steps=num_steps - 1)
         all_tensors.append(traj)
+        all_vel.append([vx, vy])
 
     tensor_data = np.stack(all_tensors, axis=0)
     with h5py.File(output_path, "w") as f:
         f.create_dataset("tensor", data=tensor_data.astype(np.float32))
         f.create_dataset("x-coordinate", data=x.astype(np.float32))
         f.create_dataset("y-coordinate", data=y.astype(np.float32))
+        f.create_dataset("velocity", data=np.array(all_vel, dtype=np.float32))  # [N, 2] constant (vx, vy)
         f.attrs["equation"] = "2D Advection"
     print(f"  [OK] Saved {output_path} ({os.path.getsize(output_path)/1024/1024:.2f} MB)")
 
@@ -449,24 +451,27 @@ if __name__ == "__main__":
     parser.add_argument("--grid_1d", type=int, default=256)
     parser.add_argument("--grid_2d", type=int, default=64)
     parser.add_argument("--quick", action="store_true", help="Generate smaller datasets for testing")
+    parser.add_argument("--num_traj", type=int, default=None, help="Override the number of trajectories")
+    parser.add_argument("--num_steps", type=int, default=None, help="Override the number of timesteps")
 
     args = parser.parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
+    steps_kw = {"num_steps": args.num_steps} if args.num_steps else {}
 
     if args.equation == "all":
         generate_all(args.output_dir, args.grid_1d, args.grid_2d, args.quick)
     elif args.equation == "burgers_1d":
-        n = 10 if args.quick else 25
-        generate_burgers_1d(os.path.join(args.output_dir, "burgers_1d.hdf5"), num_traj=n, grid=args.grid_1d)
+        n = args.num_traj or (10 if args.quick else 25)
+        generate_burgers_1d(os.path.join(args.output_dir, "burgers_1d.hdf5"), num_traj=n, **steps_kw, grid=args.grid_1d)
     elif args.equation == "heat_2d":
-        n = 5 if args.quick else 15
-        generate_heat_2d(os.path.join(args.output_dir, "heat_2d.hdf5"), num_traj=n, grid=args.grid_2d)
+        n = args.num_traj or (5 if args.quick else 15)
+        generate_heat_2d(os.path.join(args.output_dir, "heat_2d.hdf5"), num_traj=n, **steps_kw, grid=args.grid_2d)
     elif args.equation == "advection_2d":
-        n = 5 if args.quick else 15
-        generate_advection_2d(os.path.join(args.output_dir, "advection_2d.hdf5"), num_traj=n, grid=args.grid_2d)
+        n = args.num_traj or (5 if args.quick else 15)
+        generate_advection_2d(os.path.join(args.output_dir, "advection_2d.hdf5"), num_traj=n, **steps_kw, grid=args.grid_2d)
     elif args.equation == "burgers_2d":
-        n = 5 if args.quick else 12
-        generate_burgers_2d(os.path.join(args.output_dir, "burgers_2d.hdf5"), num_traj=n, grid=args.grid_2d)
+        n = args.num_traj or (5 if args.quick else 12)
+        generate_burgers_2d(os.path.join(args.output_dir, "burgers_2d.hdf5"), num_traj=n, **steps_kw, grid=args.grid_2d)
     elif args.equation == "navier_stokes_2d":
-        n = 5 if args.quick else 10
-        generate_navier_stokes_2d(os.path.join(args.output_dir, "navier_stokes_2d.hdf5"), num_traj=n, grid=args.grid_2d)
+        n = args.num_traj or (5 if args.quick else 10)
+        generate_navier_stokes_2d(os.path.join(args.output_dir, "navier_stokes_2d.hdf5"), num_traj=n, **steps_kw, grid=args.grid_2d)

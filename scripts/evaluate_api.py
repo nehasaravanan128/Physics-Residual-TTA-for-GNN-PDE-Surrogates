@@ -64,13 +64,14 @@ def main():
     parser.add_argument("--checkpoint_path", required=True)
     parser.add_argument("--meta_path", default=None)
     parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--num_samples", type=int, default=25, help="Number of trajectories to evaluate (prevents OOM on large datasets)")
     parser.add_argument("--output_json", action="store_true")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if args.dataset == "burgers":
-        dataset = load_burgers(args.data_path)
+        dataset = load_burgers(args.data_path, num_samples=args.num_samples if args.num_samples > 0 else None)
     else:
         if not args.meta_path:
             print(json.dumps({"error": "--meta_path required for cylinder dataset"}))
@@ -79,13 +80,7 @@ def main():
 
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
 
-    ckpt = torch.load(args.checkpoint_path, map_location=device, weights_only=False)
-    model = MeshGraphNet(
-        node_in_dim=ckpt["node_in_dim"],
-        edge_in_dim=ckpt["edge_in_dim"],
-        out_dim=ckpt["out_dim"],
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
+    model = MeshGraphNet.from_checkpoint(args.checkpoint_path, device=device)
 
     metrics = evaluate_model(model, loader, device)
     metrics["checkpoint"] = os.path.basename(args.checkpoint_path)

@@ -45,13 +45,7 @@ def run_ablation_studies(
     print("=" * 70)
 
     # 1. Load model & weights
-    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    model = MeshGraphNet(
-        node_in_dim=ckpt["node_in_dim"],
-        edge_in_dim=ckpt["edge_in_dim"],
-        out_dim=ckpt["out_dim"],
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
+    model = MeshGraphNet.from_checkpoint(checkpoint_path, device=device)
 
     # 2. Load dataset
     with h5py.File(data_path, "r") as f:

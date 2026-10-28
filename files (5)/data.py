@@ -19,7 +19,7 @@ from torch_geometric.data import Data
 # ---------------------------------------------------------------------------
 
 
-def load_burgers(h5_path, num_samples=None):
+def load_burgers(h5_path, num_samples=None, t_stride=1):
     """
     Loads a PDEBench 1D Burgers' HDF5 file and converts it into a list of PyG
     Data objects, one per (trajectory, timestep) pair.
@@ -33,11 +33,12 @@ def load_burgers(h5_path, num_samples=None):
     import h5py
 
     with h5py.File(h5_path, "r") as f:
-        tensor = f["tensor"][:]  # [N, T, X]
-        x_coord = f["x-coordinate"][:]  # [X]
-
-    if num_samples is not None:
-        tensor = tensor[:num_samples]
+        ds = f["tensor"]
+        if num_samples is not None:
+            tensor = ds[:num_samples]
+        else:
+            tensor = ds[:]
+        x_coord = f["x-coordinate"][:]
 
     N, T, X = tensor.shape
 
@@ -57,7 +58,7 @@ def load_burgers(h5_path, num_samples=None):
 
     dataset = []
     for n in range(N):
-        for t in range(T - 1):  # predict t -> t+1
+        for t in range(0, T - 1, t_stride):  # predict t -> t+1
             x_in = torch.tensor(tensor[n, t], dtype=torch.float32).unsqueeze(-1)  # [X, 1]
             x_target = torch.tensor(tensor[n, t + 1], dtype=torch.float32).unsqueeze(-1)
 
