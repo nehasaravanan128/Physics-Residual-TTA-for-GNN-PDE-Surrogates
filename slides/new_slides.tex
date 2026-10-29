@@ -1,0 +1,245 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{booktabs,tikz,amsmath,amssymb,array}
+\usepackage[most]{tcolorbox}
+
+\definecolor{navy}{HTML}{1B2A41}
+\definecolor{accent}{HTML}{C2410C}
+\definecolor{tint}{HTML}{FBF3EA}
+\definecolor{slate}{HTML}{F1F5F9}
+\definecolor{good}{HTML}{15803D}
+\definecolor{bad}{HTML}{B91C1C}
+\definecolor{muted}{HTML}{6E798A}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{}
+\setbeamercolor{normal text}{fg=black}
+\setbeamercolor{structure}{fg=navy}
+\setbeamertemplate{itemize item}{\color{accent}$\blacktriangleright$}
+\setbeamertemplate{itemize subitem}{\color{accent}\small$\triangleright$}
+\setbeamertemplate{enumerate item}{\insertenumlabel.}
+\setbeamersize{text margin left=36pt,text margin right=30pt}
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[navy] (current page.north west) rectangle ([yshift=-29.75pt]current page.north east);
+    \node[anchor=west,text=white,font=\large\bfseries] at ([xshift=11.25pt,yshift=-14.9pt]current page.north west) {\insertframetitle};
+  \end{tikzpicture}%
+  \vspace*{22pt}}
+
+\newtcolorbox{finding}{enhanced,colback=tint,colframe=tint,borderline west={2.2pt}{0pt}{accent},
+  arc=0pt,outer arc=0pt,boxrule=0pt,left=7pt,right=6pt,top=4pt,bottom=4pt,fontupper=\small}
+\newtcolorbox{idea}{enhanced,colback=slate,colframe=slate,borderline west={2.2pt}{0pt}{navy},
+  arc=0pt,outer arc=0pt,boxrule=0pt,left=7pt,right=6pt,top=4pt,bottom=4pt,fontupper=\small}
+\newcommand{\up}[1]{\textcolor{good}{#1}}
+\newcommand{\dn}[1]{\textcolor{bad}{#1}}
+
+\begin{document}
+
+% ---------------------------------------------------------------- A (replaces p5)
+\begin{frame}{Contributions}
+\begin{enumerate}\setlength{\itemsep}{3pt}
+\item A MeshGraphNet surrogate for the 1D viscous Burgers' equation (PDEBench).
+\item A differentiable finite-difference residual for uniform and non-uniform meshes.
+\item A decoder-only test-time adaptation procedure with anchor regularisation and best-state selection --- no labels used.
+\item A \textbf{residual gate} that runs TTA only when the physics check can still see an error, calibrated on separate data.
+\item A held-out evaluation: \textbf{20 unseen trajectories}, mean $\pm$ std, paired Wilcoxon tests; plus ablations and geometric shift.
+\item A 2D extension on \textbf{trained} FNO-2D / U-Net-2D surrogates (8 datasets) and an interactive dashboard (Next.js + Express + PyTorch).
+\end{enumerate}
+\end{frame}
+
+% ---------------------------------------------------------------- B (new, method)
+\begin{frame}{Residual gate: adapt only when the physics sees an error}
+\begin{columns}[T]
+\begin{column}{0.52\textwidth}
+\small
+A low residual does not always mean a low error. If the model is already better than the residual can resolve, TTA only adds noise.
+\vspace{4pt}
+\begin{itemize}\setlength{\itemsep}{2pt}
+\item Label-free score: \\[2pt]
+  $\displaystyle q=\frac{R(\hat u)}{R(\text{copy } u_t)}$
+\item Floor $q_{\text{floor}}$: median $q$ of the \emph{true} next state on calibration trajectories (per mesh).
+\item Adapt iff $q > \kappa \cdot q_{\text{floor}}$.
+\item $\kappa \in \{1,\dots,5,\infty\}$ chosen on calibration data; $\infty$ = never adapt.
+\end{itemize}
+\end{column}
+\begin{column}{0.44\textwidth}
+\begin{idea}
+\textbf{Split (1D).} Train: trajectories 0--8999. Calibrate: 9900--9919. Test: 9980--9999. No test labels are used to pick $\kappa$.
+\end{idea}
+\vspace{2pt}
+\begin{finding}
+\textbf{Also fixed:} the best-state snapshot was saved \emph{after} the optimiser step it was scored on. It is now saved before, and the final state is checked too.
+\end{finding}
+\vspace{2pt}
+{\footnotesize\color{muted} Crank--Nicolson residual: truth scores $0.18\times$ the copy residual ($0.77\times$ for implicit), so it is the sharper check.}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- C (new, results headline)
+\begin{frame}{Held-out evaluation: 20 unseen trajectories}
+\vspace*{6pt}\begin{minipage}{\linewidth}\small 100 samples per mesh (20 trajectories $\times$ 5 timesteps). Original model, 12 steps, $\eta=10^{-4}$, $\lambda=0.1$.\end{minipage}
+\vspace{4pt}
+\begin{center}\resizebox{\linewidth}{!}{%
+\begin{tabular}{l c c c c c}
+\toprule
+Mesh & Baseline rel.\ $L_2$ & Plain TTA & \textbf{Gated TTA} & Worse (plain$\to$gated) & $p$ (gated) \\
+\midrule
+Uniform & 9.62\% & \up{+15.9\%} $\pm$ 19.4 & \textbf{\up{+18.9\%}} $\pm$ 15.4 & 11\% $\to$ 4\% & $1.3\times10^{-5}$ \\
+Jitter $\pm35\%$ & 9.60\% & \up{+14.4\%} $\pm$ 25.4 & \textbf{\up{+18.1\%}} $\pm$ 13.5 & 8\% $\to$ 0\% & $2\times10^{-6}$ \\
+Warped & 9.49\% & \up{+14.0\%} $\pm$ 26.9 & \textbf{\up{+18.0\%}} $\pm$ 16.1 & 8\% $\to$ 0\% & $2\times10^{-6}$ \\
+Coarse $N{=}512$ & 9.57\% & \up{+22.7\%} $\pm$ 16.1 & \textbf{\up{+22.7\%}} $\pm$ 16.1 & 2\% $\to$ 2\% & $2\times10^{-6}$ \\
+\bottomrule
+\end{tabular}}
+\end{center}
+\vspace{2pt}
+\begin{finding}
+Every gated gain is significant (paired two-sided Wilcoxon over trajectories, $p\le1.3\times10^{-5}$), and the gate also \textbf{cuts the spread}: std 13--16\% vs.\ 19--27\% for plain TTA. Earlier we quoted 73.9\% from 3 hand-picked samples; \emph{these} are the numbers to quote.
+\end{finding}
+{\footnotesize\color{muted} Error reduction = MSE change per trajectory, mean $\pm$ std over the 20 trajectories (positive = TTA helped).}
+\end{frame}
+
+% ---------------------------------------------------------------- D (replaces p20)
+\begin{frame}{Geometric shift and an accurate model}
+\begin{columns}[T]
+\begin{column}{0.47\textwidth}
+\small
+\textbf{Geometric shift is no longer an open problem.} The earlier losses ($+13.8\%$ MSE on warped) came from the best-state bug. After the fix, plain TTA on the original model:
+\vspace{3pt}
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+Shift & Error reduction \\
+\midrule
+Jitter $\pm35\%$ & \up{+34.9\%} \\
+Warped & \up{+28.0\%} \\
+Coarse ($N{=}512$) & \up{+36.9\%} \\
+\bottomrule
+\end{tabular}
+\end{center}
+{\footnotesize\color{muted} Same samples as the original table; the held-out table on slide 10 is the reliable version.}
+\end{column}
+\begin{column}{0.49\textwidth}
+\small
+\textbf{v2 model} (delta prediction, normalisation; 2.35\% one-step error vs.\ 12.8\%):
+\vspace{3pt}
+\begin{center}\footnotesize
+\begin{tabular}{lcc}
+\toprule
+Mesh & Plain TTA & \textbf{Gated} \\
+\midrule
+Uniform & \dn{$-190.6\%$} & $-8.2\%$ {\scriptsize($p{=}0.06$)} \\
+Jitter & \dn{$-61.9\%$} & 0\% {\scriptsize(shut)} \\
+Warped & \up{$+13.7\%$} & \textbf{\up{+13.1\%}} \\
+Coarse & \up{$+36.9\%$} & \textbf{\up{+36.9\%}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{finding}
+Plain TTA hurts 82--89\% of v2 samples on uniform and jitter; the gate cuts that to $\le$5\% and keeps the gains where v2 is weak.
+\end{finding}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- E (replaces p22)
+\begin{frame}{2D extension: flow past obstacles}
+\begin{columns}[T]
+\begin{column}{0.49\textwidth}
+\textbf{Data --- Lattice Boltzmann (D2Q9, BGK)}
+\begin{itemize}\small\setlength{\itemsep}{1pt}
+\item 9 particle populations per cell; collide $f\leftarrow f-\omega(f-f^{eq})$, then stream
+\item Bounce-back walls on obstacle masks; $Re\approx 60$--$195$
+\item $48\times96$ grid: cylinder, NACA\,0012, square, backward step, twin cylinders
+\item Plus heat, advection, NS vorticity ($64\times64$)
+\end{itemize}
+\textbf{Surrogates}
+\begin{itemize}\small\setlength{\itemsep}{1pt}
+\item FNO-2D (spectral, 1.19\,M params), U-Net-2D (0.47\,M)
+\end{itemize}
+\end{column}
+\begin{column}{0.47\textwidth}
+\textbf{2D residuals} (conv-kernel stencils)
+{\small\[\begin{gathered}
+\nabla\cdot\mathbf u=\partial_x u_x+\partial_y u_y=0\\
+\partial_t u-\kappa\nabla^2u=0\\
+\partial_t\mathbf u+(\mathbf u\cdot\nabla)\mathbf u+\nabla p-\nu\nabla^2\mathbf u=0
+\end{gathered}\]}
+\begin{idea}
+\textbf{Trained and benchmarked.} 10 trajectories per dataset: 6 train, 1 calibration (traj.\ 9), 3 test (2, 5, 8). On the LBM flows the models are \textbf{2--13$\times$ more accurate} than copying the previous frame (e.g.\ square: 0.08\% vs.\ 0.78\%).
+\end{idea}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- F (new, 2D results)
+\begin{frame}{2D results: the gate decides where TTA is safe}
+\vspace*{6pt}\begin{minipage}{\linewidth}\small Trained FNO-2D / U-Net-2D on 8 datasets (5 Lattice-Boltzmann obstacle flows, heat, advection, vorticity). Per dataset: 6 train, 1 calibration, 3 test trajectories (57 test frames); $\kappa$ and $q_{\text{floor}}$ from the calibration trajectory only.\end{minipage}
+\vspace{3pt}
+\begin{center}\resizebox{\linewidth}{!}{%
+\begin{tabular}{l l c c c}
+\toprule
+Dataset & Model & Plain TTA & \textbf{Gated TTA} & Frames worse (plain$\to$gated) \\
+\midrule
+5 LBM obstacle flows & FNO-2D & $+0.9\%$ to \dn{$-20.2\%$} & 0\% (gate shut) & 35--100\% $\to$ \textbf{0\%} \\
+5 LBM obstacle flows & U-Net-2D & \dn{$-11.9\%$ to $-249\%$} & 0\% (gate shut) & 55--100\% $\to$ \textbf{0\%} \\
+\midrule
+Heat & FNO / U-Net & \up{+25.0\% / +45.4\%} & \textbf{\up{+25.0\% / +45.4\%}} & 0\% $\to$ 0\% \\
+Advection & FNO / U-Net & \up{+6.6\% / +67.5\%} & \textbf{\up{+6.6\% / +67.5\%}} & 0\% $\to$ 0\% \\
+Vorticity & FNO / U-Net & \up{+5.7\% / +57.7\%} & \textbf{\up{+5.7\% / +57.7\%}} & 0\% $\to$ 0\% \\
+\bottomrule
+\end{tabular}}
+\end{center}
+\vspace{2pt}
+\begin{finding}
+The gate opened on \textbf{every} frame of the three equations with an exact residual ($p\approx5\times10^{-11}$ over frames) and on \textbf{no} frame of the LBM flows, where the trained models already beat what the residual can resolve. No 2D test frame got worse.
+\end{finding}
+{\footnotesize\color{muted} Frames within a trajectory are correlated, so treat 2D $p$-values as indicative.}
+\end{frame}
+
+% ---------------------------------------------------------------- G (replaces p25)
+\begin{frame}{Limitations \& future work}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{Limitations}
+\begin{itemize}\small\setlength{\itemsep}{2pt}
+\item Gains depend on the residual: TTA only helps where the PDE check is sharper than the model's error.
+\item The gate protects, but it cannot make TTA help an already-accurate model (v2 uniform, LBM flows).
+\item Needs the governing PDE and its parameters.
+\item $\sim$0.35\,s overhead per sample on CPU.
+\item 2D tests: 3 trajectories; frames correlated.
+\item Single-step evaluation; v2 rollouts unstable.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Future work}
+\begin{itemize}\small\setlength{\itemsep}{2pt}
+\item Sharper residuals for LBM flows (e.g.\ lattice-level consistency) so the gate can open there.
+\item More 2D test trajectories for trajectory-level tests.
+\item Shift in the data (true $\nu=0.002$ simulations).
+\item Trajectory-level TTA for long autoregressive rollouts.
+\item Adapt edge encoder / LayerNorm under geometric shift.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- H (replaces p26)
+\begin{frame}{Conclusion}
+\begin{center}
+\textbf{A trained surrogate can be corrected at test time without labels by minimising the PDE residual through its decoder --- and a label-free gate tells us when not to.}
+\end{center}
+\vspace{4pt}
+\begin{itemize}\small\setlength{\itemsep}{3pt}
+\item \textbf{Held-out 1D:} +18--23\% lower error on all four meshes (20 unseen trajectories, $p\le1.3\times10^{-5}$), with $\le$4\% of samples made worse.
+\item \textbf{Geometric shift:} works after the best-state fix (+28--37\%).
+\item \textbf{2D:} +45--68\% (U-Net) on heat, advection and vorticity; the gate stays shut on obstacle flows, so no frame got worse.
+\item Decoder-only adaptation is 4$\times$ cheaper and far more stable than full fine-tuning.
+\item TTA is only as good as its physics residual --- the gate measures that directly.
+\end{itemize}
+\end{frame}
+
+\end{document}

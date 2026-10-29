@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage[paperwidth=453.543pt,paperheight=255.118pt,margin=0pt]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{tikz}
+\definecolor{accent}{HTML}{C2410C}
+\definecolor{track}{HTML}{E2E8F0}
+\definecolor{muted}{HTML}{6E798A}
+\pagestyle{empty}
+\newcommand{\stamp}[1]{%
+\begin{tikzpicture}[remember picture,overlay]
+  \coordinate (O) at (current page.south west);
+  \fill[track] ([yshift=-29.75pt]current page.north west) rectangle ([yshift=-30.25pt]current page.north east);
+  \fill[accent] ([yshift=-29.75pt]current page.north west) rectangle ([xshift=#1/19*453.543pt,yshift=-30.25pt]current page.north west);
+  \fill[white] ([xshift=396pt,yshift=6pt]O) rectangle ([xshift=453pt,yshift=22pt]O);
+  \node[anchor=base east,inner sep=0pt,text=muted,font=\fontsize{7.97}{9}\selectfont] at ([xshift=439.6pt,yshift=12.668pt]O) {#1/19};
+\end{tikzpicture}\null\newpage}
+\begin{document}
+\stamp{1}\stamp{2}\stamp{3}\stamp{4}\stamp{5}\stamp{6}\stamp{7}\stamp{8}\stamp{9}\stamp{10}\stamp{11}\stamp{12}\stamp{13}\stamp{14}\stamp{15}\stamp{16}\stamp{17}\stamp{18}
+\end{document}
